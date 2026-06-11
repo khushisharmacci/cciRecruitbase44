@@ -1,0 +1,63 @@
+{
+  "name": "Interview",
+  "type": "object",
+  "properties": {
+    "company_id": {
+      "type": "string",
+      "description": "Tenant company ID for data isolation"
+    },
+    "candidate_name": {
+      "type": "string"
+    },
+    "candidate_id": {
+      "type": "string"
+    },
+    "position_title": {
+      "type": "string"
+    },
+    "interviewer": {
+      "type": "string"
+    },
+    "interview_date": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "interview_type": {
+      "type": "string",
+      "enum": [
+        "Phone Screen",
+        "Technical",
+        "HR",
+        "Panel",
+        "Final",
+        "Culture Fit"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Scheduled",
+        "Completed",
+        "Cancelled",
+        "No Show",
+        "Rescheduled"
+      ],
+      "default": "Scheduled"
+    },
+    "feedback": {
+      "type": "string"
+    },
+    "rating": {
+      "type": "number"
+    },
+    "location": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "candidate_name",
+    "position_title",
+    "interview_date",
+    "status"
+  ]
+}
