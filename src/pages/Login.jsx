@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,43 +61,34 @@ export default function Login() {
     }
   };
 
-  const logActivity = async (userEmail, role, status, companyId, action = "login") => {
-    try {
-      await base44.entities.LoginActivity.create({
-        user_email: userEmail,
-        user_role: role || "unknown",
-        action,
-        status,
-        device_info: navigator.userAgent?.substring(0, 120) || "",
-        ip_address: "client",
-        ...(companyId ? { company_id: companyId } : {})
-      });
-    } catch {/* non-blocking */}
-  };
+  const logActivity = async () => {};
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      await base44.auth.loginViaEmailPassword(email, password);
-      // Get user to determine redirect
-      let user = null;
-      try {user = await base44.auth.me();} catch {}
-      await logActivity(email, user?.role, "success", user?.company_id);
-      const role = user?.role || "recruiter";
-      const dest = ROLE_REDIRECTS[role] || "/";
-      window.location.href = dest;
-    } catch (err) {
-      await logActivity(email, null, "failed", null);
-      setError(err.message || "Invalid email or password");
-    }
-    setLoading(false);
-  };
+  e.preventDefault();
+  setError("");
+  setLoading(true);
 
-  const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", "/");
-  };
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) throw error;
+
+    console.log("Logged in user:", data.user);
+
+    window.location.href = "/";
+  } catch (err) {
+    setError(err.message || "Invalid email or password");
+  }
+
+  setLoading(false);
+};
+
+  const handleGoogle = async () => {
+  alert("Google login not migrated yet");
+};
 
   if (mode === "platform") {
     return (
