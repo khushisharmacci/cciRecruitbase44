@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { useTenant } from "@/lib/tenant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,21 +34,64 @@ export default function Candidates() {
 
   const { data: candidates = [], isLoading } = useQuery({
     queryKey: ["candidates", companyId],
-    queryFn: () => base44.entities.Candidate.filter(tenantFilter(), "-created_date")
+    queryFn: async () => {
+  const { data, error } = await supabase
+    .from("candidates")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  return data || [];
+}
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Candidate.create(stampRecord(data)),
+    mutationFn: async (data) => {
+  const payload = {
+    ...data,
+    current_job_role: data.current_job_role
+  };
+
+  delete payload.current_job_role;
+
+  const { error } = await supabase
+    .from("candidates")
+    .insert([payload]);
+
+  if (error) throw error;
+},
     onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["candidates"] });setDialogOpen(false);}
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Candidate.update(id, data),
+    mutationFn: async ({ id, data }) => {
+  const payload = {
+    ...data,
+    current_job_role: data.current_role
+  };
+
+  delete payload.current_job_role;
+
+  const { error } = await supabase
+    .from("candidates")
+    .update(payload)
+    .eq("id", id);
+
+  if (error) throw error;
+},
     onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["candidates"] });setDialogOpen(false);setEditCandidate(null);}
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Candidate.delete(id),
+    mutationFn: async (id) => {
+  const { error } = await supabase
+    .from("candidates")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw error;
+},
     onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["candidates"] });setDeleteId(null);}
   });
 
@@ -122,7 +165,7 @@ export default function Candidates() {
                       </div>
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
-                      <p className="text-sm text-foreground">{c.current_role || "—"}</p>
+                      <p className="text-sm text-foreground">{c.current_job_role || "—"}</p>
                       <p className="text-xs text-muted-foreground">{c.current_company || ""}</p>
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell text-sm text-foreground">{c.experience_years ? `${c.experience_years} yrs` : "—"}</td>
