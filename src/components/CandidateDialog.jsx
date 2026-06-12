@@ -12,7 +12,7 @@ const sources = ["LinkedIn", "Job Board", "Referral", "Direct", "Agency", "Other
 export default function CandidateDialog({ open, onOpenChange, candidate, onSave, isLoading }) {
   const [form, setForm] = useState({
     full_name: "", email: "", phone: "", skills: "", experience_years: "",
-    current_company: "", current_role: "", expected_salary: "", location: "",
+    current_company: "", current_job_role: "", expected_salary: "", location: "",
     status: "Applied", source: "LinkedIn", position_title: "", notes: ""
   });
 
@@ -25,7 +25,7 @@ export default function CandidateDialog({ open, onOpenChange, candidate, onSave,
         skills: candidate.skills || "",
         experience_years: candidate.experience_years || "",
         current_company: candidate.current_company || "",
-        current_role: candidate.current_role || "",
+        current_job_role: candidate.current_job_role || "",
         expected_salary: candidate.expected_salary || "",
         location: candidate.location || "",
         status: candidate.status || "Applied",
@@ -35,7 +35,7 @@ export default function CandidateDialog({ open, onOpenChange, candidate, onSave,
       });
     } else {
       setForm({ full_name: "", email: "", phone: "", skills: "", experience_years: "",
-        current_company: "", current_role: "", expected_salary: "", location: "",
+        current_company: "", current_job_role: "", expected_salary: "", location: "",
         status: "Applied", source: "LinkedIn", position_title: "", notes: "" });
     }
   }, [candidate, open]);
@@ -79,7 +79,7 @@ export default function CandidateDialog({ open, onOpenChange, candidate, onSave,
             </div>
             <div>
               <Label>Current Role</Label>
-              <Input value={form.current_role} onChange={(e) => setForm({ ...form, current_role: e.target.value })} />
+              <Input value={form.current_job_role} onChange={(e) => setForm({ ...form, current_job_role: e.target.value })} />
             </div>
             <div>
               <Label>Experience (Years)</Label>
