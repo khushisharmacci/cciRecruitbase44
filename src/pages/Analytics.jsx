@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { useTenant } from "@/lib/tenant";
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { BarChart3, TrendingUp, Users, Building2 } from "lucide-react";
@@ -7,10 +7,43 @@ import { BarChart3, TrendingUp, Users, Building2 } from "lucide-react";
 const COLORS = ["hsl(224,76%,48%)", "hsl(160,60%,45%)", "hsl(38,92%,50%)", "hsl(280,65%,60%)", "hsl(340,75%,55%)"];
 
 export default function Analytics() {
-  const { tenantFilter, companyId } = useTenant();
-  const { data: candidates = [] } = useQuery({ queryKey: ["candidates", companyId], queryFn: () => base44.entities.Candidate.filter(tenantFilter()) });
-  const { data: interviews = [] } = useQuery({ queryKey: ["interviews", companyId], queryFn: () => base44.entities.Interview.filter(tenantFilter()) });
-  const { data: clients = [] } = useQuery({ queryKey: ["clients", companyId], queryFn: () => base44.entities.Client.filter(tenantFilter()) });
+  const { companyId } = useTenant();
+  const { data: candidates = [] } = useQuery({
+  queryKey: ["candidates"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("candidates")
+      .select("*");
+
+    if (error) throw error;
+
+    return data || [];
+  }
+});
+  const { data: interviews = [] } = useQuery({
+  queryKey: ["interviews"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("interviews")
+      .select("*");
+
+    if (error) throw error;
+
+    return data || [];
+  }
+});
+  const { data: clients = [] } = useQuery({
+  queryKey: ["clients"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("clients")
+      .select("*");
+
+    if (error) throw error;
+
+    return data || [];
+  }
+});
 
   const statusCounts = candidates.reduce((acc, c) => {acc[c.status] = (acc[c.status] || 0) + 1;return acc;}, {});
   const statusData = Object.entries(statusCounts).map(([name, value]) => ({ name, value }));

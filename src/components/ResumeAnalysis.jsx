@@ -30,7 +30,7 @@ Candidate:
 - Name: ${candidate.full_name}
 - Skills: ${candidate.skills || "Not specified"}
 - Experience: ${candidate.experience_years || 0} years
-- Current Role: ${candidate.current_role || "Not specified"}
+- Current Role: ${candidate.current_job_role || "Not specified"}
 - Current Company: ${candidate.current_company || "Not specified"}
 
 Job Description:

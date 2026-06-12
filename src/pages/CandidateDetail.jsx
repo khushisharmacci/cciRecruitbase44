@@ -1,6 +1,6 @@
 import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { ArrowLeft, Mail, Phone, MapPin, Calendar, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -19,14 +19,40 @@ export default function CandidateDetail() {
   const queryClient = useQueryClient();
   const { data: candidate, isLoading } = useQuery({
     queryKey: ["candidate", candidateId],
-    queryFn: () => base44.entities.Candidate.get(candidateId),
+    queryFn: async () => {
+  const { data, error } = await supabase
+    .from("candidates")
+    .select("*")
+    .eq("id", candidateId)
+    .single();
+
+  if (error) throw error;
+
+  return data;
+},
   });
   const { data: interviews = [] } = useQuery({
     queryKey: ["candidate-interviews", candidateId],
-    queryFn: () => base44.entities.Interview.filter({ candidate_id: candidateId }),
+    queryFn: async () => {
+  const { data, error } = await supabase
+    .from("interviews")
+    .select("*")
+    .eq("candidate_id", candidateId);
+
+  if (error) throw error;
+
+  return data || [];
+},
   });
   const updateMutation = useMutation({
-    mutationFn: (data) => base44.entities.Candidate.update(candidateId, data),
+    mutationFn: async (data) => {
+  const { error } = await supabase
+    .from("candidates")
+    .update(data)
+    .eq("id", candidateId);
+
+  if (error) throw error;
+},
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["candidate", candidateId] }),
   });
 
@@ -64,7 +90,7 @@ export default function CandidateDetail() {
         <div className="bg-card rounded-xl border border-border p-6 space-y-4">
           <h3 className="font-semibold text-foreground">Professional Details</h3>
           <div className="space-y-3 text-sm">
-            <div className="flex justify-between"><span className="text-muted-foreground">Current Role</span><span className="text-foreground font-medium">{candidate.current_role || "—"}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Current Role</span><span className="text-foreground font-medium">{candidate.current_job_role || "—"}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Company</span><span className="text-foreground font-medium">{candidate.current_company || "—"}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Experience</span><span className="text-foreground font-medium">{candidate.experience_years ? `${candidate.experience_years} years` : "—"}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Expected Salary</span><span className="text-foreground font-medium">{candidate.expected_salary ? `$${candidate.expected_salary.toLocaleString()}` : "—"}</span></div>

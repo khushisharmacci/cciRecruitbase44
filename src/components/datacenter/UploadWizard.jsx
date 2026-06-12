@@ -20,8 +20,8 @@ import ColumnMapper from "@/components/datacenter/ColumnMapper";
 const ENTITY_FIELDS = {
   Candidate: {
     required: ["full_name", "email"],
-    optional: ["phone", "skills", "experience_years", "current_company", "current_role", "expected_salary", "location", "source", "position_title", "notes"],
-    labels: { full_name: "Full Name", email: "Email", phone: "Phone", skills: "Skills", experience_years: "Experience (Yrs)", current_company: "Current Company", current_role: "Current Role", expected_salary: "Expected Salary", location: "Location", source: "Source", position_title: "Position", notes: "Notes" },
+    optional: ["phone", "skills", "experience_years", "current_company", "current_job_role", "expected_salary", "location", "source", "position_title", "notes"],
+    labels: { full_name: "Full Name", email: "Email", phone: "Phone", skills: "Skills", experience_years: "Experience (Yrs)", current_company: "Current Company", current_job_role: "Current Role", expected_salary: "Expected Salary", location: "Location", source: "Source", position_title: "Position", notes: "Notes" },
     defaults: { status: "Applied" }
   },
   Client: {

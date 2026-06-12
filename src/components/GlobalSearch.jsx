@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { useTenant } from "@/lib/tenant";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -29,12 +30,45 @@ export default function GlobalSearch() {
   const [aiResult, setAiResult] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const inputRef = useRef(null);
-  const { tenantFilter, companyId } = useTenant();
+  const { companyId } = useTenant();
 
-  const { data: candidates = [] } = useQuery({ queryKey: ["candidates", companyId], queryFn: () => base44.entities.Candidate.filter(tenantFilter()) });
-  const { data: clients = [] } = useQuery({ queryKey: ["clients", companyId], queryFn: () => base44.entities.Client.filter(tenantFilter()) });
+  const { data: candidates = [] } = useQuery({
+  queryKey: ["candidates"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("candidates")
+      .select("*");
+
+    if (error) throw error;
+
+    return data || [];
+  }
+});
+  const { data: clients = [] } = useQuery({
+  queryKey: ["clients"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("clients")
+      .select("*");
+
+    if (error) throw error;
+
+    return data || [];
+  }
+});
   const { data: leads = [] } = useQuery({ queryKey: ["leads", companyId], queryFn: () => base44.entities.Lead.filter(tenantFilter()) });
-  const { data: positions = [] } = useQuery({ queryKey: ["positions", companyId], queryFn: () => base44.entities.Position.filter(tenantFilter()) });
+  const { data: positions = [] } = useQuery({
+  queryKey: ["positions"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("positions")
+      .select("*");
+
+    if (error) throw error;
+
+    return data || [];
+  }
+});
 
   const dataMap = { candidates, clients, leads, positions };
 

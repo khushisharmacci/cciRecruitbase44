@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/AuthContext";
 import { useTenant } from "@/lib/tenant";
 import KPICards from "../components/dashboard/KPICards";
@@ -14,10 +14,43 @@ const HERO_IMG = "https://media.base44.com/images/public/6a1d46e236a02f5dd2633cc
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { tenantFilter, companyId } = useTenant();
-  const { data: candidates = [] } = useQuery({ queryKey: ["candidates", companyId], queryFn: () => base44.entities.Candidate.filter(tenantFilter()) });
-  const { data: positions = [] } = useQuery({ queryKey: ["positions", companyId], queryFn: () => base44.entities.Position.filter(tenantFilter()) });
-  const { data: interviews = [] } = useQuery({ queryKey: ["interviews", companyId], queryFn: () => base44.entities.Interview.filter(tenantFilter()) });
+  const { companyId } = useTenant();
+  const { data: candidates = [] } = useQuery({
+  queryKey: ["candidates"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("candidates")
+      .select("*");
+
+    if (error) throw error;
+
+    return data || [];
+  }
+});
+  const { data: positions = [] } = useQuery({
+  queryKey: ["positions"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("positions")
+      .select("*");
+
+    if (error) throw error;
+
+    return data || [];
+  }
+});
+  const { data: interviews = [] } = useQuery({
+  queryKey: ["interviews"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("interviews")
+      .select("*");
+
+    if (error) throw error;
+
+    return data || [];
+  }
+});
   const { data: revenue = [] } = useQuery({ queryKey: ["revenue", companyId], queryFn: () => base44.entities.RevenueRecord.filter(tenantFilter()) });
 
   const statusCount = (arr, field, val) => arr.filter((a) => a[field] === val).length;

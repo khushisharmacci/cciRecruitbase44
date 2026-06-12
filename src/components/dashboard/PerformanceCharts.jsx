@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { useTenant } from "@/lib/tenant";
 import { AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { format, subMonths, addMonths, startOfMonth } from "date-fns";
@@ -7,9 +7,31 @@ import { format, subMonths, addMonths, startOfMonth } from "date-fns";
 const COLORS = ["hsl(224,76%,48%)", "hsl(160,60%,45%)", "hsl(38,92%,50%)", "hsl(280,65%,60%)", "hsl(340,75%,55%)"];
 
 export default function PerformanceCharts() {
-  const { tenantFilter, companyId } = useTenant();
-  const { data: candidates = [] } = useQuery({ queryKey: ["candidates", companyId], queryFn: () => base44.entities.Candidate.filter(tenantFilter()) });
-  const { data: interviews = [] } = useQuery({ queryKey: ["interviews", companyId], queryFn: () => base44.entities.Interview.filter(tenantFilter()) });
+  const { companyId } = useTenant();
+  const { data: candidates = [] } = useQuery({
+  queryKey: ["candidates"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("candidates")
+      .select("*");
+
+    if (error) throw error;
+
+    return data || [];
+  }
+});
+  const { data: interviews = [] } = useQuery({
+  queryKey: ["interviews"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("interviews")
+      .select("*");
+
+    if (error) throw error;
+
+    return data || [];
+  }
+});
 
   // Build last 6 months from real data
   const monthlyData = Array.from({ length: 6 }, (_, i) => {
@@ -18,11 +40,11 @@ export default function PerformanceCharts() {
     const monthStart = startOfMonth(d).getTime();
     const nextMonthStart = startOfMonth(addMonths(d, 1)).getTime();
     const placements = candidates.filter((c) => {
-      const t = c.created_date ? new Date(c.created_date).getTime() : 0;
+      const t = c.created_at ? new Date(c.created_at).getTime() : 0;
       return t >= monthStart && t < nextMonthStart && c.status === "Joined";
     }).length;
     const ivs = interviews.filter((c) => {
-      const t = c.created_date ? new Date(c.created_date).getTime() : 0;
+      const t = c.created_at ? new Date(c.created_at).getTime() : 0;
       return t >= monthStart && t < nextMonthStart;
     }).length;
     return { month: monthStr, placements, interviews: ivs };

@@ -68,7 +68,7 @@ export default function Candidates() {
     mutationFn: async ({ id, data }) => {
   const payload = {
     ...data,
-    current_job_role: data.current_role
+    current_job_role: data.current_job_role
   };
 
   delete payload.current_job_role;

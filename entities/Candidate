@@ -25,7 +25,7 @@
     "current_company": {
       "type": "string"
     },
-    "current_role": {
+    "current_job_role": {
       "type": "string"
     },
     "expected_salary": {

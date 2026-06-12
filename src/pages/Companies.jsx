@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,18 +21,47 @@ export default function Companies() {
   const [deleteId, setDeleteId] = useState(null);
   const [form, setForm] = useState({ name: "", industry: "", contact_person: "", contact_email: "", contact_phone: "", address: "", status: "Active", notes: "" });
 
-  const { data: clients = [], isLoading } = useQuery({ queryKey: ["clients", companyId], queryFn: () => base44.entities.Client.filter(tenantFilter(), "-created_date") });
+  queryFn: async () => {
+  const { data, error } = await supabase
+    .from("clients")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  return data || [];
+};
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Client.create(stampRecord(data)),
+    mutationFn: async (data) => {
+  const { error } = await supabase
+    .from("clients")
+    .insert([data]);
+
+  if (error) throw error;
+},
     onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["clients"] });setDialogOpen(false);}
   });
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Client.update(id, data),
+    mutationFn: async ({ id, data }) => {
+  const { error } = await supabase
+    .from("clients")
+    .update(data)
+    .eq("id", id);
+
+  if (error) throw error;
+},
     onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["clients"] });setDialogOpen(false);setEditItem(null);}
   });
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Client.delete(id),
+    mutationFn: async (id) => {
+  const { error } = await supabase
+    .from("clients")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw error;
+},
     onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["clients"] });setDeleteId(null);}
   });
 
