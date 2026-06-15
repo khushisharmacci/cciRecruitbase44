@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,30 +8,71 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, UsersRound, Pencil, Trash2 } from "lucide-react";
-import { useTenant } from "@/lib/tenant";
 
 export default function Teams() {
   const queryClient = useQueryClient();
-  const { tenantFilter, stampRecord, companyId } = useTenant();
+  const companyId = "default";
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [form, setForm] = useState({ name: "", lead_name: "", department: "", members: "", description: "" });
 
-  const { data: teams = [], isLoading } = useQuery({ queryKey: ["teams", companyId], queryFn: () => base44.entities.TeamGroup.filter(tenantFilter()) });
+  const { data: teams = [], isLoading } = useQuery({
+  queryKey: ["teams"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("teams")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    return data || [];
+  },
+});
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.TeamGroup.create(stampRecord(data)),
-    onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["teams"] });setDialogOpen(false);}
-  });
+  mutationFn: async (data) => {
+    const { error } = await supabase
+      .from("teams")
+      .insert([data]);
+
+    if (error) throw error;
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["teams"] });
+    setDialogOpen(false);
+  }
+});
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.TeamGroup.update(id, data),
-    onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["teams"] });setDialogOpen(false);setEditItem(null);}
-  });
+  mutationFn: async ({ id, data }) => {
+    const { error } = await supabase
+      .from("teams")
+      .update(data)
+      .eq("id", id);
+
+    if (error) throw error;
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["teams"] });
+    setDialogOpen(false);
+    setEditItem(null);
+  }
+});
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.TeamGroup.delete(id),
-    onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["teams"] });setDeleteId(null);}
-  });
+  mutationFn: async (id) => {
+    const { error } = await supabase
+      .from("teams")
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["teams"] });
+    setDeleteId(null);
+  }
+});
 
   const openCreate = () => {setEditItem(null);setForm({ name: "", lead_name: "", department: "", members: "", description: "" });setDialogOpen(true);};
   const openEdit = (t) => {setEditItem(t);setForm({ name: t.name || "", lead_name: t.lead_name || "", department: t.department || "", members: t.members || "", description: t.description || "" });setDialogOpen(true);};

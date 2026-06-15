@@ -9,10 +9,10 @@
  *   const { companyId, tenantFilter, stampRecord } = useTenant();
  *
  *   // Filter a query:
- *   base44.entities.Candidate.filter(tenantFilter())
+ *  
  *
  *   // Stamp a new record before creating:
- *   base44.entities.Candidate.create(stampRecord({ full_name, email, ... }))
+ *  
  */
 
 import { useAuth } from "@/lib/AuthContext";

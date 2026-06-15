@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { useTenant } from "@/lib/tenant";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -203,7 +203,16 @@ export default function UploadWizard({ folders, onDone, onCreateFolder, queryCli
   const handleImport = async () => {
     setImporting(true);
     try {
-      const sdk = base44.entities[entity];
+      const tableMap = {
+  Candidate: "candidates",
+  Client: "clients",
+  Lead: "leads",
+  Position: "positions",
+  RevenueRecord: "revenue_records",
+  TeamGroup: "team_groups"
+};
+
+const tableName = tableMap[entity];
       let success = 0, failed = 0;
       const BATCH = 50;
 
@@ -233,25 +242,46 @@ export default function UploadWizard({ folders, onDone, onCreateFolder, queryCli
               : "Custom Fields: " + JSON.stringify(customData, null, 2);
           }
 
-          try { await sdk.create(stampRecord(record)); success++; } catch { failed++; }
+          try {
+  const { error } = await supabase
+    .from(tableName)
+    .insert([
+      {
+        ...record,
+        company_id: companyId,
+      },
+    ]);
+
+  if (error) throw error;
+
+  success++;
+} catch (err) {
+  console.error(err);
+  failed++;
+}
         }));
       }
 
       // Save DataFile record
-      await base44.entities.DataFile.create(stampRecord({
-        name: file.name.replace(/\.[^/.]+$/, ""),
-        original_filename: file.name,
-        folder_id: selectedFolder?.id || null,
-        folder_name: selectedFolder?.name || null,
-        entity_type: entity,
-        row_count: allRows.length,
-        column_count: headers.length,
-        columns: JSON.stringify(headers),
-        rows_data: JSON.stringify(allRows.slice(0, 10000)),
-        sync_status: failed === 0 ? "synced" : "error",
-        imported_count: success,
-        size_bytes: file.size || 0
-      }));
+      await supabase
+  .from("data_files")
+  .insert([
+    {
+      company_id: companyId,
+      name: file.name.replace(/\.[^/.]+$/, ""),
+      original_filename: file.name,
+      folder_id: selectedFolder?.id || null,
+      folder_name: selectedFolder?.name || null,
+      entity_type: entity,
+      row_count: allRows.length,
+      column_count: headers.length,
+      columns: JSON.stringify(headers),
+      rows_data: JSON.stringify(allRows.slice(0, 10000)),
+      sync_status: failed === 0 ? "synced" : "error",
+      imported_count: success,
+      size_bytes: file.size || 0,
+    },
+  ]);
 
       queryClient.invalidateQueries();
       setImportResult({ success, failed, total: allRows.length });

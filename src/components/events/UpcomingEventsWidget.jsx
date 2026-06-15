@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
-import { useTenant } from "@/lib/tenant";
+import { supabase } from "@/lib/supabase";;
 import { parseISO, isToday, isTomorrow, isThisWeek, isPast, addDays, startOfDay, endOfDay } from "date-fns";
 import { Link } from "react-router-dom";
 import { Calendar, ChevronRight } from "lucide-react";
@@ -11,13 +10,22 @@ import EventCard from "./EventCard";
 const FILTERS = ["Today", "Tomorrow", "This Week", "Overdue"];
 
 export default function UpcomingEventsWidget() {
-  const { tenantFilter } = useTenant();
   const [filter, setFilter] = useState("Today");
 
   const { data: events = [] } = useQuery({
-    queryKey: ["events-widget", tenantFilter()],
-    queryFn: () => base44.entities.Event.filter(tenantFilter({ status: "Upcoming" }), "start_datetime", 100),
-  });
+  queryKey: ["events-widget"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("events")
+      .select("*")
+      .eq("status", "Upcoming")
+      .order("start_datetime", { ascending: true });
+
+    if (error) throw error;
+
+    return data || [];
+  },
+});
 
   const filtered = events.filter(e => {
     try {

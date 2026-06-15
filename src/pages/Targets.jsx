@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,33 +9,73 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Target as TargetIcon, Pencil, Trash2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
-import { useTenant } from "@/lib/tenant";
 
 const periods = ["Daily", "Weekly", "Monthly", "Quarterly", "Yearly"];
 const types = ["Placements", "Interviews", "Screenings", "Revenue", "Closures"];
 
 export default function Targets() {
   const queryClient = useQueryClient();
-  const { tenantFilter, stampRecord, companyId } = useTenant();
+  const companyId = "default";
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [form, setForm] = useState({ recruiter_name: "", period: "Monthly", target_type: "Placements", target_value: "", achieved_value: "" });
 
-  const { data: targets = [], isLoading } = useQuery({ queryKey: ["targets", companyId], queryFn: () => base44.entities.Target.filter(tenantFilter()) });
+  const { data: targets = [], isLoading } = useQuery({
+  queryKey: ["targets"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("targets")
+      .select("*");
+
+    if (error) throw error;
+
+    return data || [];
+  },
+});
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Target.create(stampRecord(data)),
-    onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["targets"] });setDialogOpen(false);}
-  });
+  mutationFn: async (data) => {
+    const { error } = await supabase
+      .from("targets")
+      .insert([data]);
+
+    if (error) throw error;
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["targets"] });
+    setDialogOpen(false);
+  }
+});
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Target.update(id, data),
-    onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["targets"] });setDialogOpen(false);setEditItem(null);}
-  });
+  mutationFn: async ({ id, data }) => {
+    const { error } = await supabase
+      .from("targets")
+      .update(data)
+      .eq("id", id);
+
+    if (error) throw error;
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["targets"] });
+    setDialogOpen(false);
+    setEditItem(null);
+  }
+});
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Target.delete(id),
-    onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["targets"] });setDeleteId(null);}
-  });
+  mutationFn: async (id) => {
+    const { error } = await supabase
+      .from("targets")
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["targets"] });
+    setDeleteId(null);
+  }
+});
 
   const openCreate = () => {setEditItem(null);setForm({ recruiter_name: "", period: "Monthly", target_type: "Placements", target_value: "", achieved_value: "" });setDialogOpen(true);};
   const openEdit = (t) => {setEditItem(t);setForm({ recruiter_name: t.recruiter_name || "", period: t.period || "Monthly", target_type: t.target_type || "Placements", target_value: t.target_value || "", achieved_value: t.achieved_value || "" });setDialogOpen(true);};

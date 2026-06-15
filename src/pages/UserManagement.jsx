@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { can, ROLE_LABELS, ASSIGNABLE_ROLE_LIST, getRoleLevel, USER_STATUS_LABELS, assignableRoles } from "@/lib/roles";
-import { useTenant } from "@/lib/tenant";
 import { Users, UserPlus, Shield, Search, Pencil, Mail, Loader2, CheckCircle2, Ban, Clock, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -35,22 +34,33 @@ const STATUS_COLORS = {
   suspended: "bg-red-500/15 text-red-300 border-red-500/30",
 };
 
-function logAudit({ actor, targetEmail, action, oldRole, newRole, notes, companyId }) {
-  return base44.entities.LoginActivity.create({
-    company_id: companyId || "",
-    user_email: targetEmail,
-    user_name: actor?.full_name || actor?.email || "",
-    user_role: newRole || oldRole || "",
-    action: "role_change",
-    status: "success",
-    notes: notes || `${actor?.full_name || actor?.email} changed role from ${ROLE_LABELS[oldRole] || oldRole} to ${ROLE_LABELS[newRole] || newRole}`,
-  }).catch(() => {});
+async function logAudit({
+  actor,
+  targetEmail,
+  action,
+  oldRole,
+  newRole,
+  notes,
+}) {
+  try {
+    await supabase.from("login_activity").insert([
+      {
+        user_email: targetEmail,
+        user_name: actor?.full_name || actor?.email || "",
+        user_role: newRole || oldRole || "",
+        action: action || "role_change",
+        status: "success",
+        device_info: notes || "",
+      },
+    ]);
+  } catch {}
 }
 
 export default function UserManagement() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { tenantFilter, companyId, isMaster } = useTenant();
+  const companyId = "default";
+const isMaster = true;
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -61,18 +71,44 @@ export default function UserManagement() {
   const [inviting, setInviting] = useState(false);
 
   const { data: users = [], isLoading } = useQuery({
-    queryKey: ["all-users", companyId],
-    queryFn: () => isMaster ? base44.entities.User.list() : base44.entities.User.filter(tenantFilter()),
-  });
+  queryKey: ["all-users"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    return data || [];
+  },
+});
 
   const updateUser = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.User.update(id, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["all-users"] });
-      toast.success("User updated");
-      setEditUser(null);
-    },
-  });
+  mutationFn: async ({ id, data }) => {
+    const { error } = await supabase
+      .from("users")
+      .update(data)
+      .eq("id", id);
+
+    if (error) throw error;
+
+    return true;
+  },
+
+  onSuccess: () => {
+    queryClient.invalidateQueries({
+      queryKey: ["all-users"],
+    });
+
+    toast.success("User updated");
+    setEditUser(null);
+  },
+
+  onError: (error) => {
+    toast.error(error.message || "Failed to update user");
+  },
+});
 
   const handleSaveUser = async () => {
     const original = users.find(u => u.id === editUser.id);
@@ -119,20 +155,46 @@ export default function UserManagement() {
   };
 
   const handleInvite = async () => {
-    if (!inviteEmail.trim()) return;
-    setInviting(true);
-    try {
-      await base44.users.inviteUser(inviteEmail.trim(), getRoleLevel(inviteRole) >= getRoleLevel("company_admin") ? "admin" : "user");
-      logAudit({ actor: user, targetEmail: inviteEmail, newRole: inviteRole, companyId, notes: `Invited by ${user?.full_name || user?.email} as ${ROLE_LABELS[inviteRole]}` });
-      toast.success(`Invitation sent to ${inviteEmail}`);
-      setInviteEmail("");
-      setInviteRole("recruiter");
-      setInviteOpen(false);
-    } catch (err) {
-      toast.error(err.message || "Failed to invite user");
-    }
-    setInviting(false);
-  };
+  if (!inviteEmail.trim()) return;
+
+  setInviting(true);
+
+  try {
+    const { error } = await supabase
+      .from("users")
+      .insert([
+        {
+          email: inviteEmail.trim(),
+          role: inviteRole,
+          account_status: "pending_approval",
+          full_name: "",
+        },
+      ]);
+
+    if (error) throw error;
+
+    await logAudit({
+      actor: user,
+      targetEmail: inviteEmail,
+      newRole: inviteRole,
+      notes: `Invited by ${user?.full_name || user?.email}`,
+    });
+
+    toast.success("User added to pending approvals");
+
+    queryClient.invalidateQueries({
+      queryKey: ["all-users"],
+    });
+
+    setInviteEmail("");
+    setInviteRole("recruiter");
+    setInviteOpen(false);
+  } catch (err) {
+    toast.error(err.message || "Failed to create invitation");
+  }
+
+  setInviting(false);
+};
 
   if (!can.manageUsers(user)) {
     return (

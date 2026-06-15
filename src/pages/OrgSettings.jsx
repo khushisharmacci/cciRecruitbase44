@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,9 +48,17 @@ export default function OrgSettings() {
   const [uploadingField, setUploadingField] = useState(null);
 
   const { data: profiles = [], isLoading } = useQuery({
-    queryKey: ["company-profile"],
-    queryFn: () => base44.entities.CompanyProfile.list(),
-  });
+  queryKey: ["company-profile"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("company_profile")
+      .select("*");
+
+    if (error) throw error;
+
+    return data || [];
+  },
+});
 
   const profile = profiles[0] || {};
   const [form, setForm] = useState({});
@@ -60,19 +68,32 @@ export default function OrgSettings() {
   const set = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
 
   const saveMutation = useMutation({
-    mutationFn: async (data) => {
-      if (profile.id) {
-        return base44.entities.CompanyProfile.update(profile.id, data);
-      } else {
-        return base44.entities.CompanyProfile.create(data);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["company-profile"] });
-      toast.success("Settings saved successfully!");
-      setForm({});
-    },
-  });
+  mutationFn: async (data) => {
+    if (profile.id) {
+      const { error } = await supabase
+        .from("company_profile")
+        .update(data)
+        .eq("id", profile.id);
+
+      if (error) throw error;
+    } else {
+      const { error } = await supabase
+        .from("company_profile")
+        .insert([data]);
+
+      if (error) throw error;
+    }
+  },
+
+  onSuccess: () => {
+    queryClient.invalidateQueries({
+      queryKey: ["company-profile"],
+    });
+
+    toast.success("Settings saved successfully!");
+    setForm({});
+  },
+});
 
   const handleSave = async () => {
     setSaving(true);
@@ -81,17 +102,9 @@ export default function OrgSettings() {
     setSaving(false);
   };
 
-  const handleFileUpload = async (file, field) => {
-    setUploadingField(field);
-    try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      set(field, file_url);
-      toast.success("File uploaded!");
-    } catch {
-      toast.error("Upload failed");
-    }
-    setUploadingField(null);
-  };
+  const handleFileUpload = async () => {
+  toast.error("File uploads not migrated yet");
+};
 
   if (!can.viewOrgSettings(user)) {
     return (

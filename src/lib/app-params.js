@@ -14,7 +14,7 @@ const getAppParamValue = (
     return defaultValue;
   }
 
-  const storageKey = `base44_${toSnakeCase(paramName)}`;
+  const storageKey = `cci_${toSnakeCase(paramName)}`;
   const urlParams = new URLSearchParams(window.location.search);
   const searchParam = urlParams.get(paramName);
 
@@ -50,7 +50,7 @@ const getAppParamValue = (
 
 const getAppParams = () => {
   if (getAppParamValue("clear_access_token") === "true") {
-    storage.removeItem("base44_access_token");
+    storage.removeItem("supabase_access_token");
     storage.removeItem("token");
   }
 

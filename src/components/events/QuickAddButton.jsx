@@ -1,19 +1,27 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
-import { useTenant } from "@/lib/tenant";
+import { supabase } from "@/lib/supabase";
 import { Plus } from "lucide-react";
 import EventForm from "./EventForm";
 
 export default function QuickAddButton() {
   const [open, setOpen] = useState(false);
-  const { stampRecord } = useTenant();
   const qc = useQueryClient();
 
   const { mutate, isPending } = useMutation({
-    mutationFn: (data) => base44.entities.Event.create(stampRecord(data)),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["events"] }); qc.invalidateQueries({ queryKey: ["events-widget"] }); setOpen(false); },
-  });
+  mutationFn: async (data) => {
+    const { error } = await supabase
+      .from("events")
+      .insert([data]);
+
+    if (error) throw error;
+  },
+  onSuccess: () => {
+    qc.invalidateQueries({ queryKey: ["events"] });
+    qc.invalidateQueries({ queryKey: ["events-widget"] });
+    setOpen(false);
+  },
+});
 
   return (
     <>

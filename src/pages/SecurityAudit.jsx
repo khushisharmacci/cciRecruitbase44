@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/AuthContext";
-import { useTenant } from "@/lib/tenant";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Shield, Search, LogIn, LogOut, AlertCircle, KeyRound, UserCog, Loader2, CheckCircle, XCircle } from "lucide-react";
@@ -36,16 +35,25 @@ const ACTION_LABELS = {
 
 export default function SecurityAudit() {
   const { user } = useAuth();
-  const { tenantFilter, companyId } = useTenant();
+  const companyId = "default";
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
 
   const { data: logs = [], isLoading } = useQuery({
-    queryKey: ["login-activity", companyId],
-    queryFn: () => base44.entities.LoginActivity.filter(tenantFilter(), "-created_date", 200),
-    refetchInterval: 30000,
-  });
+  queryKey: ["login-activity"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("login_activity")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    return data || [];
+  },
+  refetchInterval: 30000,
+});
 
   if (!can.manageSettings(user)) {
     return (
@@ -167,7 +175,7 @@ export default function SecurityAudit() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                      {log.created_date ? format(new Date(log.created_date), "MMM d, h:mm a") : "—"}
+                      {log.created_at ? format(new Date(log.created_at), "MMM d, h:mm a") : "—"}
                     </td>
                   </tr>
                 );

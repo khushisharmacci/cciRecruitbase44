@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
 import { supabase } from "@/lib/supabase";
-import { useTenant } from "@/lib/tenant";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Search, Users, Building2, Handshake, Briefcase, DollarSign, Brain, Loader2 } from "lucide-react";
@@ -30,7 +28,6 @@ export default function GlobalSearch() {
   const [aiResult, setAiResult] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const inputRef = useRef(null);
-  const { companyId } = useTenant();
 
   const { data: candidates = [] } = useQuery({
   queryKey: ["candidates"],
@@ -56,7 +53,18 @@ export default function GlobalSearch() {
     return data || [];
   }
 });
-  const { data: leads = [] } = useQuery({ queryKey: ["leads", companyId], queryFn: () => base44.entities.Lead.filter(tenantFilter()) });
+  const { data: leads = [] } = useQuery({
+  queryKey: ["leads"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("leads")
+      .select("*");
+
+    if (error) throw error;
+
+    return data || [];
+  },
+});
   const { data: positions = [] } = useQuery({
   queryKey: ["positions"],
   queryFn: async () => {
@@ -91,9 +99,12 @@ export default function GlobalSearch() {
     if (!query.trim() || !isNaturalLanguage) return;
     setAiLoading(true);setAiMode(true);
     const context = `Candidates: ${candidates.slice(0, 20).map((c) => `${c.full_name} (${c.skills}, ${c.experience_years}y, ${c.status}, ${c.location})`).join("; ")}`;
-    const res = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are a recruitment assistant. Answer this query based on the data provided. Be concise and list results with bullet points.\n\nQuery: "${query}"\n\nData: ${context}`
-    });
+    const handleSearch = async () => {
+  setAiMode(true);
+  setAiResult(
+    "AI Search is temporarily disabled while migrating from Base44 to Supabase."
+  );
+};
     setAiResult(typeof res === "string" ? res : res?.response || res?.text || JSON.stringify(res) || "No results found.");
     setAiLoading(false);
   };

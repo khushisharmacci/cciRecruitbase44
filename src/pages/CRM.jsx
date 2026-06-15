@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,24 +26,56 @@ const stageColors = {
 
 export default function CRM() {
   const queryClient = useQueryClient();
-  const { tenantFilter, stampRecord, companyId } = useTenant();
+  const companyId = "default";
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [form, setForm] = useState({ company_name: "", contact_person: "", email: "", phone: "", stage: "New Lead", source: "", notes: "", value: "", next_followup: "" });
 
-  const { data: leads = [], isLoading } = useQuery({ queryKey: ["leads", companyId], queryFn: () => base44.entities.Lead.filter(tenantFilter(), "-created_date") });
+  const { data: leads = [], isLoading } = useQuery({
+  queryKey: ["leads"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("leads")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    return data || [];
+  },
+});
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Lead.create(stampRecord(data)),
+  mutationFn: async (data) => {
+    const { error } = await supabase
+      .from("leads")
+      .insert([data]);
+
+    if (error) throw error;
+  },
     onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["leads"] });setDialogOpen(false);}
   });
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Lead.update(id, data),
+  mutationFn: async ({ id, data }) => {
+    const { error } = await supabase
+      .from("leads")
+      .update(data)
+      .eq("id", id);
+
+    if (error) throw error;
+  },
     onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["leads"] });setDialogOpen(false);setEditItem(null);}
   });
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Lead.delete(id),
+  mutationFn: async (id) => {
+    const { error } = await supabase
+      .from("leads")
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
+  },
     onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["leads"] });setDeleteId(null);}
   });
 

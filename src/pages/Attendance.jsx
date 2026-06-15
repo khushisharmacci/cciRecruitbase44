@@ -1,8 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
-import { useTenant } from "@/lib/tenant";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { format, startOfWeek, startOfMonth, parseISO, differenceInMinutes } from "date-fns";
@@ -19,15 +18,24 @@ function nowStr() {return format(new Date(), "HH:mm");}
 export default function Attendance() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { tenantFilter, stampRecord, companyId } = useTenant();
+  const companyId = "default";
   const [filterEmployee, setFilterEmployee] = useState("");
   const [filterDate, setFilterDate] = useState("");
   const [activeChart, setActiveChart] = useState("weekly");
 
   const { data: records = [], isLoading } = useQuery({
-    queryKey: ["attendance", companyId],
-    queryFn: () => base44.entities.AttendanceRecord.filter(tenantFilter(), "-date")
-  });
+  queryKey: ["attendance"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("attendance_records")
+      .select("*")
+      .order("date", { ascending: false });
+
+    if (error) throw error;
+
+    return data || [];
+  },
+});
 
   const today = todayStr();
   const myTodayRecord = records.find(
@@ -35,32 +43,51 @@ export default function Attendance() {
   );
 
   const checkInMutation = useMutation({
-    mutationFn: () => base44.entities.AttendanceRecord.create(stampRecord({
-      employee_name: user?.full_name || user?.email || "Unknown",
-      employee_id: user?.id,
-      date: today,
-      check_in: nowStr(),
-      status: "Present"
-    })),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["attendance"] })
-  });
+  mutationFn: async () => {
+    const { error } = await supabase
+      .from("attendance_records")
+      .insert([
+        {
+          employee_name: user?.full_name || user?.email || "Unknown",
+          employee_id: user?.id,
+          date: today,
+          check_in: nowStr(),
+          status: "Present",
+        },
+      ]);
+
+    if (error) throw error;
+  },
+  onSuccess: () =>
+    queryClient.invalidateQueries({ queryKey: ["attendance"] }),
+});
 
   const checkOutMutation = useMutation({
-    mutationFn: () => {
-      const checkInTime = myTodayRecord?.check_in;
-      let hours = 0;
-      if (checkInTime) {
-        const [h1, m1] = checkInTime.split(":").map(Number);
-        const [h2, m2] = nowStr().split(":").map(Number);
-        hours = (h2 * 60 + m2 - (h1 * 60 + m1)) / 60;
-      }
-      return base44.entities.AttendanceRecord.update(myTodayRecord.id, {
+  mutationFn: async () => {
+    const checkInTime = myTodayRecord?.check_in;
+
+    let hours = 0;
+
+    if (checkInTime) {
+      const [h1, m1] = checkInTime.split(":").map(Number);
+      const [h2, m2] = nowStr().split(":").map(Number);
+
+      hours = (h2 * 60 + m2 - (h1 * 60 + m1)) / 60;
+    }
+
+    const { error } = await supabase
+      .from("attendance_records")
+      .update({
         check_out: nowStr(),
-        total_hours: Math.max(0, parseFloat(hours.toFixed(2)))
-      });
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["attendance"] })
-  });
+        total_hours: Math.max(0, parseFloat(hours.toFixed(2))),
+      })
+      .eq("id", myTodayRecord.id);
+
+    if (error) throw error;
+  },
+  onSuccess: () =>
+    queryClient.invalidateQueries({ queryKey: ["attendance"] }),
+});
 
   // KPI calculations
   const myRecords = records.filter((r) => r.employee_name === (user?.full_name || user?.email));

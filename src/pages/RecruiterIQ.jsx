@@ -4,7 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { base44 } from "@/api/base44Client";
+async function callAI(prompt) {
+  const response = await fetch("/api/recruiter-iq", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ prompt }),
+  });
+
+  const data = await response.json();
+  return data.result;
+}
 import { Brain, FileText, Search, Users, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
@@ -45,9 +56,28 @@ function JDGenerator() {
 
   const generate = async () => {
     setLoading(true);
-    const res = await base44.integrations.Core.InvokeLLM({
-      prompt: `Generate a comprehensive, professional job description for the following role:\n\nJob Title: ${form.title}\nExperience: ${form.experience} years\nKey Skills: ${form.skills}\nIndustry: ${form.industry}\nLocation: ${form.location}\n\nInclude:\n1. Role Summary\n2. Key Responsibilities (5-8 bullet points)\n3. Required Skills\n4. Preferred Skills\n5. Qualifications\n6. Salary Range (estimate based on role and experience)\n7. SEO Keywords for job posting\n\nFormat in clean markdown.`
-    });
+    const res = await callAI(`
+Generate a comprehensive, professional job description for the following role:
+
+Job Title: ${form.title}
+Experience: ${form.experience} years
+Key Skills: ${form.skills}
+Industry: ${form.industry}
+Location: ${form.location}
+
+Include:
+1. Role Summary
+2. Key Responsibilities
+3. Required Skills
+4. Preferred Skills
+5. Qualifications
+6. Salary Range
+7. SEO Keywords
+
+Format in markdown.
+`);
+
+setResult(res);
     setResult(typeof res === "string" ? res : res?.response || res?.text || "");
     setLoading(false);
   };
@@ -88,23 +118,33 @@ function ResumeScreener() {
 
   const screen = async () => {
     setLoading(true);
-    const res = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are an expert recruitment screener. Analyze the candidate's resume against the job description and provide a detailed match analysis.\n\nJob Description:\n${jd}\n\nCandidate Resume:\n${resume}\n\nProvide analysis in the following JSON format.`,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          overall_score: { type: "number" },
-          skill_match: { type: "number" },
-          experience_match: { type: "number" },
-          education_match: { type: "number" },
-          cultural_fit: { type: "number" },
-          strengths: { type: "array", items: { type: "string" } },
-          missing_skills: { type: "array", items: { type: "string" } },
-          risk_factors: { type: "array", items: { type: "string" } },
-          recommendation: { type: "string" }
-        }
-      }
-    });
+    const res = await callAI(`
+You are an expert recruitment screener.
+
+Analyze the candidate's resume against the job description.
+
+Job Description:
+${jd}
+
+Candidate Resume:
+${resume}
+
+Return ONLY valid JSON in this format:
+
+{
+  "overall_score": 0,
+  "skill_match": 0,
+  "experience_match": 0,
+  "education_match": 0,
+  "cultural_fit": 0,
+  "strengths": [],
+  "missing_skills": [],
+  "risk_factors": [],
+  "recommendation": ""
+}
+`);
+
+setResult(JSON.parse(res));
     setResult(res);
     setLoading(false);
   };
@@ -178,17 +218,46 @@ function InterviewQuestions() {
 
   const generate = async () => {
     setLoading(true);
-    const res = await base44.integrations.Core.InvokeLLM({
-      prompt: `Generate 10 interview questions for a ${role} role with ${experience} years of experience. Include:\n- 4 Technical Questions\n- 3 Behavioral Questions\n- 3 Situational Questions\n\nFor each question include: the question text, ideal answer indicators, evaluation notes, red flags to watch for, and a rating scale description (1-5).`,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          technical: { type: "array", items: { type: "object", properties: { question: { type: "string" }, ideal_answer: { type: "string" }, evaluation_notes: { type: "string" }, red_flags: { type: "string" }, rating_scale: { type: "string" } } } },
-          behavioral: { type: "array", items: { type: "object", properties: { question: { type: "string" }, ideal_answer: { type: "string" }, evaluation_notes: { type: "string" }, red_flags: { type: "string" }, rating_scale: { type: "string" } } } },
-          situational: { type: "array", items: { type: "object", properties: { question: { type: "string" }, ideal_answer: { type: "string" }, evaluation_notes: { type: "string" }, red_flags: { type: "string" }, rating_scale: { type: "string" } } } }
-        }
-      }
-    });
+    const res = await callAI(`
+Generate interview questions for:
+
+Role: ${role}
+Experience: ${experience} years
+
+Return ONLY valid JSON:
+
+{
+  "technical":[
+    {
+      "question":"",
+      "ideal_answer":"",
+      "evaluation_notes":"",
+      "red_flags":"",
+      "rating_scale":""
+    }
+  ],
+  "behavioral":[
+    {
+      "question":"",
+      "ideal_answer":"",
+      "evaluation_notes":"",
+      "red_flags":"",
+      "rating_scale":""
+    }
+  ],
+  "situational":[
+    {
+      "question":"",
+      "ideal_answer":"",
+      "evaluation_notes":"",
+      "red_flags":"",
+      "rating_scale":""
+    }
+  ]
+}
+`);
+
+setResult(JSON.parse(res));
     setResult(res);
     setLoading(false);
   };
@@ -243,21 +312,29 @@ function CandidateInsights() {
 
   const generate = async () => {
     setLoading(true);
-    const res = await base44.integrations.Core.InvokeLLM({
-      prompt: `Analyze this candidate's resume and recruiter observations to generate a comprehensive insight report.\n\nResume:\n${resume}\n\nRecruiter Observations:\n${observations}\n\nGenerate a report with: summary, strengths, weaknesses, leadership potential score (1-10), risk analysis, recommended role, and hiring verdict.`,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          summary: { type: "string" },
-          strengths: { type: "array", items: { type: "string" } },
-          weaknesses: { type: "array", items: { type: "string" } },
-          leadership_score: { type: "number" },
-          risk_analysis: { type: "string" },
-          recommended_role: { type: "string" },
-          hiring_verdict: { type: "string" }
-        }
-      }
-    });
+    const res = await callAI(`
+Analyze this candidate.
+
+Resume:
+${resume}
+
+Recruiter Observations:
+${observations}
+
+Return ONLY valid JSON:
+
+{
+  "summary":"",
+  "strengths":[],
+  "weaknesses":[],
+  "leadership_score":0,
+  "risk_analysis":"",
+  "recommended_role":"",
+  "hiring_verdict":""
+}
+`);
+
+setResult(JSON.parse(res));
     setResult(res);
     setLoading(false);
   };

@@ -1,3 +1,4 @@
+import { supabase } from "@/lib/supabase";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import {
@@ -7,7 +8,6 @@ import {
   Settings, Shield, UserCog, CalendarCheck, MessageSquare
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { base44 } from "@/api/base44Client";
 import { can, ROLE_LABELS } from "@/lib/roles";
 
 export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobileOpen, user }) {
@@ -84,7 +84,8 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
     <div className="flex flex-col h-full">
       <div className="px-4 py-5 flex items-center gap-3">
         <img
-          src="https://media.base44.com/images/public/6a1d46e236a02f5dd2633cca/d39c47d04_NewCCI.jpeg"
+          src="https://media.
+          .com/images/public/6a1d46e236a02f5dd2633cca/d39c47d04_NewCCI.jpeg"
           alt="CCI Logo"
           className={cn("w-auto shrink-0 rounded-lg object-contain", collapsed ? "h-9" : "h-12")}
         />
@@ -104,7 +105,10 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
 
       <div className="px-3 pb-4 space-y-2">
         <button
-          onClick={() => base44.auth.logout()}
+          onClick={async () => {
+  await supabase.auth.signOut();
+  window.location.href = "/login";
+}}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/60 hover:text-red-400 hover:bg-sidebar-accent transition-all w-full"
         >
           <LogOut className="h-5 w-5 shrink-0" />

@@ -1,8 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
 import { useAuth } from "@/lib/AuthContext";
-import { useTenant } from "@/lib/tenant";
+import { supabase } from "@/lib/supabase";
 import { formatINR, formatINRLabel } from "@/utils/currency";
 import ExportButton from "@/components/ExportButton";
 import { Button } from "@/components/ui/button";
@@ -24,26 +23,61 @@ const statusColor = { Pending: "bg-amber-500/15 text-amber-300", Received: "bg-e
 export default function Revenue() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { tenantFilter, stampRecord, companyId } = useTenant();
+  const companyId = "default";
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [form, setForm] = useState({ client_name: "", amount: "", date: "", recruiter_name: "", candidate_name: "", type: "Placement Fee", status: "Pending", invoice_number: "" });
 
-  const { data: revenue = [], isLoading } = useQuery({ queryKey: ["revenue", companyId], queryFn: () => base44.entities.RevenueRecord.filter(tenantFilter(), "-date") });
+  const { data: revenue = [], isLoading } = useQuery({
+  queryKey: ["revenue"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("revenue_records")
+      .select("*")
+      .order("date", { ascending: false });
+
+    if (error) throw error;
+
+    return data || [];
+  },
+});
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.RevenueRecord.create(stampRecord(data)),
+    mutationFn: async (data) => {
+  const { error } = await supabase
+    .from("revenue_records")
+    .insert([data]);
+
+  if (error) throw error;
+},
     onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["revenue"] });setDialogOpen(false);}
   });
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.RevenueRecord.update(id, data),
+    mutationFn: async ({ id, data }) => {
+  const { error } = await supabase
+    .from("revenue_records")
+    .update(data)
+    .eq("id", id);
+
+  if (error) throw error;
+},
     onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["revenue"] });setDialogOpen(false);setEditItem(null);}
   });
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.RevenueRecord.delete(id),
-    onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["revenue"] });setDeleteId(null);}
-  });
+  mutationFn: async (id) => {
+    const { error } = await supabase
+      .from("revenue_records")
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["revenue"] });
+    setDeleteId(null);
+  }
+});
 
   if (user?.role !== "admin") {
     return <div className="flex items-center justify-center h-full py-20"><p className="text-muted-foreground">Revenue data is only accessible to administrators.</p></div>;

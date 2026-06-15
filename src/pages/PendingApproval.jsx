@@ -1,7 +1,7 @@
 import { useAuth } from "@/lib/AuthContext";
 import { Clock, LogOut, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 
 export default function PendingApproval() {
   const { user } = useAuth();
@@ -32,7 +32,17 @@ export default function PendingApproval() {
         <p className="text-xs text-muted-foreground">
           If you believe this is an error, please contact your company administrator.
         </p>
-        <Button variant="outline" className="gap-2" onClick={() => base44.auth.logout()}>
+        <Button variant="outline" className="gap-2" <Button
+  variant="outline"
+  className="gap-2"
+  onClick={async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  }}
+>
+  <LogOut className="h-4 w-4" />
+  Sign Out
+</Button>
           <LogOut className="h-4 w-4" /> Sign Out
         </Button>
       </div>

@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/AuthContext";
-import { useTenant } from "@/lib/tenant";
 import { MessageSquare } from "lucide-react";
 import ConversationList from "@/components/chat/ConversationList";
 import ChatWindow from "@/components/chat/ChatWindow";
@@ -11,7 +10,7 @@ import { getUnreadCount } from "@/components/chat/chatUtils";
 
 export default function TeamChat() {
   const { user } = useAuth();
-  const { tenantFilter, stampRecord, companyId } = useTenant();
+  const companyId = "default";
   const qc = useQueryClient();
 
   const [selectedConv, setSelectedConv] = useState(null);
@@ -19,24 +18,45 @@ export default function TeamChat() {
 
   // Fetch all company users
   const { data: allUsers = [] } = useQuery({
-    queryKey: ["users-chat", companyId],
-    queryFn: () => base44.entities.User.list(),
-    select: (data) => data.filter((u) => {
-      // filter to same company
-      const userCompany = user?.company_id;
-      return !userCompany || u.company_id === userCompany || u.id === user?.id;
-    })
-  });
+  queryKey: ["users-chat"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("users")
+      .select("*");
+
+    if (error) throw error;
+
+    return data || [];
+  },
+});
 
   const { data: conversations = [] } = useQuery({
     queryKey: ["chat-conversations", companyId],
-    queryFn: () => base44.entities.ChatConversation.filter(tenantFilter(), "-last_message_at", 100),
+    queryFn: async () => {
+  const { data, error } = await supabase
+    .from("chat_conversations")
+    .select("*")
+    .order("last_message_at", { ascending: false });
+
+  if (error) throw error;
+
+  return data || [];
+},
     refetchInterval: 5000
   });
 
   const { data: messages = [] } = useQuery({
     queryKey: ["chat-messages", companyId],
-    queryFn: () => base44.entities.ChatMessage.filter(tenantFilter(), "created_date", 500),
+    queryFn: async () => {
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .select("*")
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+
+  return data || [];
+},
     refetchInterval: 3000
   });
 
@@ -64,12 +84,17 @@ export default function TeamChat() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.ChatConversation.create(stampRecord(data)),
-    onSuccess: (conv) => {
-      qc.invalidateQueries({ queryKey: ["chat-conversations"] });
-      setSelectedConv(conv);
-    }
-  });
+  mutationFn: async (data) => {
+    const { data: result, error } = await supabase
+      .from("chat_conversations")
+      .insert([data])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return result;
+  },
 
   const handleNewConversation = ({ type, member, name, description, members }) => {
     if (type === "direct") {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Upload, FileText, Download, RefreshCw, Sparkles, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,48 +11,60 @@ export default function ResumeAnalysis({ candidate, onCandidateUpdate }) {
   const [matchReport, setMatchReport] = useState(null);
 
   const handleResumeUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const file = e.target.files[0];
+  if (!file) return;
+
+  try {
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    await onCandidateUpdate({ resume_url: file_url });
+
+    const fileName = `${Date.now()}-${file.name}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from("resumes")
+      .upload(fileName, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data } = supabase.storage
+      .from("resumes")
+      .getPublicUrl(fileName);
+
+    await onCandidateUpdate({
+      resume_url: data.publicUrl,
+    });
+  } catch (err) {
+    console.error(err);
+  } finally {
     setUploading(false);
-  };
+  }
+};
 
   const handleAnalyze = async () => {
-    if (!jd.trim()) return;
+  if (!jd.trim()) return;
+
+  try {
     setAnalyzing(true);
     setMatchReport(null);
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `You are an expert recruitment AI. Analyze the following candidate profile against the job description.
 
-Candidate:
-- Name: ${candidate.full_name}
-- Skills: ${candidate.skills || "Not specified"}
-- Experience: ${candidate.experience_years || 0} years
-- Current Role: ${candidate.current_job_role || "Not specified"}
-- Current Company: ${candidate.current_company || "Not specified"}
-
-Job Description:
-${jd}
-
-Provide a detailed match analysis.`,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          overall_match: { type: "number", description: "0-100 percentage overall match" },
-          skill_match: { type: "number", description: "0-100 skill match score" },
-          experience_match: { type: "number", description: "0-100 experience match score" },
-          matching_skills: { type: "array", items: { type: "string" } },
-          missing_skills: { type: "array", items: { type: "string" } },
-          interview_focus_areas: { type: "array", items: { type: "string" } },
-          summary: { type: "string" },
-        },
+    const response = await fetch("/api/recruiter-iq/analyze-match", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
+      body: JSON.stringify({
+        candidate,
+        jd,
+      }),
     });
+
+    const result = await response.json();
     setMatchReport(result);
+  } catch (err) {
+    console.error(err);
+  } finally {
     setAnalyzing(false);
-  };
+  }
+};
 
   const scoreColor = (score) => {
     if (score >= 75) return "text-emerald-600";

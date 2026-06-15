@@ -51,7 +51,18 @@ export default function Dashboard() {
     return data || [];
   }
 });
-  const { data: revenue = [] } = useQuery({ queryKey: ["revenue", companyId], queryFn: () => base44.entities.RevenueRecord.filter(tenantFilter()) });
+  const { data: revenue = [] } = useQuery({
+  queryKey: ["revenue"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("revenue_records")
+      .select("*");
+
+    if (error) throw error;
+
+    return data || [];
+  },
+});
 
   const statusCount = (arr, field, val) => arr.filter((a) => a[field] === val).length;
   const totalRevenue = revenue.reduce((s, r) => s + (r.amount || 0), 0);

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Bell, Check, Calendar, UserCheck, Handshake, Target, Mail } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -17,22 +17,44 @@ const typeIcons = {
 export default function Notifications() {
   const queryClient = useQueryClient();
   const { data: notifications = [], isLoading } = useQuery({
-    queryKey: ["notifications"],
-    queryFn: () => base44.entities.Notification.list("-created_date")
-  });
+  queryKey: ["notifications"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    return data || [];
+  },
+});
 
   const markRead = useMutation({
-    mutationFn: (id) => base44.entities.Notification.update(id, { read: true }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] })
-  });
+  mutationFn: async (id) => {
+    const { error } = await supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq("id", id);
+
+    if (error) throw error;
+  },
+  onSuccess: () =>
+    queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+});
 
   const markAllRead = useMutation({
-    mutationFn: async () => {
-      const unread = notifications.filter((n) => !n.read);
-      for (const n of unread) await base44.entities.Notification.update(n.id, { read: true });
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] })
-  });
+  mutationFn: async () => {
+    const { error } = await supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq("read", false);
+
+    if (error) throw error;
+  },
+  onSuccess: () =>
+    queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+});
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -73,7 +95,7 @@ export default function Notifications() {
                 <div className="flex-1 min-w-0">
                   <p className={cn("text-sm font-medium", n.read ? "text-muted-foreground" : "text-foreground")}>{n.title}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{n.message}</p>
-                  <p className="text-xs text-muted-foreground/60 mt-1">{n.created_date ? format(new Date(n.created_date), "MMM d, h:mm a") : ""}</p>
+                  <p className="text-xs text-muted-foreground/60 mt-1">{<n className="created_at"></n> ? format(new Date(n.created_at), "MMM d, h:mm a") : ""}</p>
                 </div>
                 {!n.read && <div className="h-2 w-2 rounded-full bg-primary shrink-0 mt-2" />}
               </div>);

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
-import { useTenant } from "@/lib/tenant";
+import { supabase } from "@/lib/supabase";
 import { parseISO, isPast, isToday, isTomorrow, isThisWeek, format } from "date-fns";
 import { Plus, Calendar, List, BarChart2, Search, Filter, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,7 +21,7 @@ const STATUS_FILTERS = ["All", "Upcoming", "Overdue", "Completed", "Missed", "Ca
 const DATE_FILTERS = ["All Time", "Today", "Tomorrow", "This Week", "Overdue"];
 
 export default function EventCenter() {
-  const { tenantFilter, stampRecord } = useTenant();
+  // tenant migration pending
   const qc = useQueryClient();
 
   const [view, setView] = useState("List");
@@ -36,24 +35,44 @@ export default function EventCenter() {
   const [deleteTarget, setDeleteTarget] = useState(null);
 
   const { data: events = [], isLoading } = useQuery({
-    queryKey: ["events", tenantFilter()],
-    queryFn: () => base44.entities.Event.filter(tenantFilter(), "-start_datetime", 500)
-  });
+  queryKey: ["events"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("events")
+      .select("*")
+      .order("start_datetime", { ascending: false });
 
-  const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.Event.create(stampRecord(data)),
-    onSuccess: () => {qc.invalidateQueries({ queryKey: ["events"] });qc.invalidateQueries({ queryKey: ["events-widget"] });setFormOpen(false);}
-  });
+    if (error) throw error;
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.Event.update(id, data),
-    onSuccess: () => {qc.invalidateQueries({ queryKey: ["events"] });qc.invalidateQueries({ queryKey: ["events-widget"] });setEditEvent(null);setFormOpen(false);}
-  });
+    return data || [];
+  },
+});
 
-  const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.Event.delete(id),
-    onSuccess: () => {qc.invalidateQueries({ queryKey: ["events"] });setDeleteTarget(null);}
-  });
+  mutationFn: async (data) => {
+  const { error } = await supabase
+    .from("events")
+    .insert([data]);
+
+  if (error) throw error;
+},
+
+  mutationFn: async ({ id, data }) => {
+  const { error } = await supabase
+    .from("events")
+    .update(data)
+    .eq("id", id);
+
+  if (error) throw error;
+},
+
+  mutationFn: async (id) => {
+  const { error } = await supabase
+    .from("events")
+    .delete()
+    .eq("id", id);
+
+  if (error) throw error;
+},
 
   const handleSave = (data) => {
     if (editEvent) updateMutation.mutate({ id: editEvent.id, data });else

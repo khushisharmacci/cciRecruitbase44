@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -33,23 +33,48 @@ export default function DataCenter() {
 
   const { data: folders = [], isLoading: loadingFolders } = useQuery({
     queryKey: ["data-folders", companyId],
-    queryFn: () => base44.entities.DataFolder.filter(tenantFilter())
+    queryFn: async () => {
+  const { data, error } = await supabase
+    .from("data_folders")
+    .select("*");
+
+  if (error) throw error;
+  return data || [];
+}
   });
 
   const { data: files = [], isLoading: loadingFiles } = useQuery({
     queryKey: ["data-files", companyId],
-    queryFn: () => base44.entities.DataFile.filter(tenantFilter(), "-created_date")
+    queryFn: async () => {
+  const { data, error } = await supabase
+    .from("data_files")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
   });
 
-  const handleCreateFolder = async (name) => {
-    const folder = await base44.entities.DataFolder.create(stampRecord({ name }));
-    queryClient.invalidateQueries({ queryKey: ["data-folders"] });
-    return folder;
-  };
+  const { data: folder, error } = await supabase
+  .from("data_folders")
+  .insert([
+    {
+      name,
+      company_id: companyId,
+    },
+  ])
+  .select()
+  .single();
+
+if (error) throw error;
 
   const handleDeleteFile = async (file) => {
     setDeletingId(file.id);
-    await base44.entities.DataFile.delete(file.id);
+    await supabase
+  .from("data_files")
+  .delete()
+  .eq("id", file.id);
     queryClient.invalidateQueries({ queryKey: ["data-files"] });
     toast.success(`"${file.name}" deleted`);
     setDeletingId(null);

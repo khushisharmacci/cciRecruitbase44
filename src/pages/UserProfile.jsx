@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useAuth } from "@/lib/AuthContext";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,39 +23,43 @@ export default function UserProfile() {
   const roleLabel = ROLE_LABELS[user?.role] || user?.role || "User";
   const initials = (user?.full_name || "U").split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
 
-  const handleAvatarUpload = async (e) => {
+  const handleAvatarUpload = async () => {
+  toast.info("Avatar uploads will be migrated to Supabase Storage later.");
+};
+  toast.info("Avatar uploads will be migrated to Supabase Storage next.");
+};
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
     try {
-      const { file_url } = await base44.integrations.Core.UploadFile({ file });
-      await base44.auth.updateMe({ photo_url: file_url });
-      await checkUserAuth();
-      toast.success("Profile picture updated");
-    } catch (err) {
-      toast.error("Failed to upload picture");
-    } finally {
-      setUploading(false);
-    }
-  };
+      const { file_url } = await .integrations.Core.UploadFile({ file });
+      //await .updateMe({ photo_url: file_url });
+     // await checkUserAuth();
+     // toast.success("Profile picture updated");
+   // } catch (err) {
+     // toast.error("Failed to upload picture");
+   // } finally {
+   //   setUploading(false);
+   // }
+ // };
 
-  const handleSave = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    try {
-      await base44.auth.updateMe({
-        full_name: form.full_name,
-        phone: form.phone,
-        linkedin_url: form.linkedin_url,
-      });
-      await checkUserAuth();
-      toast.success("Profile updated successfully");
-    } catch (err) {
-      toast.error("Failed to update profile");
-    } finally {
-      setSaving(false);
-    }
-  };
+  try {
+  const { error } = await supabase.auth.updateUser({
+    data: {
+      full_name: form.full_name,
+      phone: form.phone,
+      linkedin_url: form.linkedin_url,
+    },
+  });
+
+  if (error) throw error;
+
+  toast.success("Profile updated successfully");
+
+  window.location.reload();
+} catch (err) {
+  toast.error("Failed to update profile");
+}
 
   return (
     <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-8">

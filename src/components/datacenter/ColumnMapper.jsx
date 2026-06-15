@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { useTenant } from "@/lib/tenant";
 import {
   Zap, CheckCircle, Plus, Save, FolderOpen, X, AlertCircle,
@@ -117,12 +117,36 @@ export default function ColumnMapper({
   // Load existing templates
   const { data: templates = [] } = useQuery({
     queryKey: ["mapping-templates", entity, companyId],
-    queryFn: () =>
-      base44.entities.MappingTemplate.filter({ entity_type: entity }, "-created_date"),
+    queryFn: async () => {
+  const { data, error } = await supabase
+    .from("mapping_templates")
+    .select("*")
+    .eq("entity_type", entity)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  return data || [];
+},
   });
 
   const saveTemplateMutation = useMutation({
-    mutationFn: (data) => base44.entities.MappingTemplate.create(stampRecord(data)),
+    mutationFn: async (data) => {
+  const { data: result, error } = await supabase
+    .from("mapping_templates")
+    .insert([
+      {
+        ...data,
+        company_id: companyId,
+      },
+    ])
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return result;
+},
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mapping-templates"] });
       toast.success("Template saved!");

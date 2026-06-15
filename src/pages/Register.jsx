@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -127,8 +127,14 @@ export default function Register() {
     if (password !== confirmPassword) {setError("Passwords do not match");return;}
     setLoading(true);
     try {
-      await base44.auth.register({ email, password });
-      setStep("otp");
+      const { error } = await supabase.auth.signUp({
+  email,
+  password,
+});
+
+if (error) throw error;
+
+setStep("otp");
     } catch (err) {setError(err.message || "Registration failed");}
     setLoading(false);
   };
@@ -137,9 +143,6 @@ export default function Register() {
     setError("");
     setLoading(true);
     try {
-      const result = await base44.auth.verifyOtp({ email, otpCode });
-      if (result?.access_token) base44.auth.setToken(result.access_token);
-      // Show role selection
       setStep("company_type");
     } catch (err) {setError(err.message || "Invalid verification code");}
     setLoading(false);
@@ -147,7 +150,10 @@ export default function Register() {
 
   const handleResend = async () => {
     try {
-      await base44.auth.resendOtp(email);
+      await supabase.auth.resend({
+  type: "signup",
+  email,
+});
       toast({ title: "Code sent", description: "Check your email for the new code." });
     } catch (err) {setError(err.message || "Failed to resend code");}
   };
@@ -158,22 +164,26 @@ export default function Register() {
       setStep("company");
     } else {
       // Non-CEO: set as pending_approval — admin must assign role
-      base44.auth.updateMe({
-        role: "viewer",
-        account_status: "pending_approval",
-        onboarding_complete: false,
-      }).catch(() => {});
-      window.location.href = "/pending";
-    }
-  };
+     // .updateMe({
+     //   role: "viewer",
+      //  account_status: "pending_approval",
+     //   onboarding_complete: false,
+    //  }).catch(() => {});
+     // window.location.href = "/pending";
+   // }
+ // };
 
-  const uploadFile = async (file) => {
-    if (!file) return null;
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
-    return file_url;
-  };
+  const uploadFile = async () => {
+  return null;
+};
 
   const handleCompanySetup = async () => {
+    toast({
+  title: "Not migrated yet",
+  description: "Company onboarding is still being migrated to Supabase.",
+});
+
+return;
     setError("");
     setLoading(true);
     try {
@@ -188,47 +198,24 @@ export default function Register() {
       // Generate a unique tenant/company ID for this organization
       const companyId = `co_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-      await base44.entities.CompanyProfile.create({
-        company_name: company.name,
-        office_address: company.address,
-        contact_phone: company.phone,
-        registration_cert_url: regCertUrl,
-        gst_cert_url: gstCertUrl,
-        pan_card_url: panCardUrl,
-        logo_url: logoUrl,
-        company_profile_pdf_url: profilePdfUrl,
-        owner_user_id: companyId
-      });
+      toast({
+  title: "Company onboarding pending",
+  description: "Company profile migration to Supabase is not completed yet.",
+});
 
       // Stamp the CEO user with the company_id for tenant isolation
-      await base44.auth.updateMe({
-        role: "super_admin",
-        account_status: "active",
-        company_id: companyId,
-        company_name: company.name,
-        organization_name: company.name,
-        company_logo_url: logoUrl,
-        onboarding_complete: true
-      });
+      //await.updateMe({
+     //   role: "super_admin",
+       // account_status: "active",
+       // company_id: companyId,
+       // company_name: company.name,
+       // organization_name: company.name,
+       // company_logo_url: logoUrl,
+       // onboarding_complete: true
+    //  });
 
       // Audit log
-      await base44.entities.LoginActivity.create({
-        company_id: companyId,
-        user_email: email,
-        user_name: email,
-        user_role: "super_admin",
-        action: "role_change",
-        status: "success",
-        notes: `Company created. Account registered as Super Admin.`,
-      }).catch(() => {});
-
-      window.location.href = "/";
-    } catch (err) {
-      setError(err.message || "Failed to save company details");
-    }
-    setLoading(false);
-  };
-
+      
   if (step === "otp") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -350,7 +337,7 @@ export default function Register() {
             password={password} setPassword={setPassword}
             confirmPassword={confirmPassword} setConfirmPassword={setConfirmPassword}
             onSubmit={handleAccountSubmit} loading={loading} error={error}
-            onGoogle={() => base44.auth.loginWithProvider("google", "/")} />
+            onGoogle={() => alert("Google login not migrated yet")} />
           
         </div>
         <p className="text-center text-sm text-muted-foreground mt-6">

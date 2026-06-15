@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { supabase } from "@/lib/supabase";
 import { Send, Paperclip, Users, Info, Smile, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import MessageBubble from "./MessageBubble";
@@ -73,7 +73,12 @@ export default function ChatWindow({ conversation, messages, currentUser, allUse
     unread.forEach(m => {
       const readBy = (() => { try { return JSON.parse(m.read_by || "[]"); } catch { return []; } })();
       if (!readBy.includes(currentUser.id)) {
-        base44.entities.ChatMessage.update(m.id, { read_by: JSON.stringify([...readBy, currentUser.id]) });
+        supabase
+  .from("chat_messages")
+  .update({
+    read_by: [...readBy, currentUser.id]
+  })
+  .eq("id", m.id);
       }
     });
     if (unread.length > 0) {
@@ -82,20 +87,40 @@ export default function ChatWindow({ conversation, messages, currentUser, allUse
   }, [convMessages.length, conversation.id]);
 
   const sendMutation = useMutation({
-    mutationFn: (msg) => base44.entities.ChatMessage.create(msg),
+    mutationFn: async (msg) => {
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .insert([msg])
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return data;
+},
     onSuccess: (newMsg) => {
       qc.invalidateQueries({ queryKey: ["chat-messages"] });
-      base44.entities.ChatConversation.update(conversation.id, {
-        last_message: newMsg.content || (newMsg.file_name ? `📎 ${newMsg.file_name}` : ""),
-        last_message_at: new Date().toISOString(),
-        last_message_by: currentUser.id
-      });
+      await supabase
+  .from("chat_conversations")
+  .update({
+    last_message: newMsg.content || (newMsg.file_name ? `📎 ${newMsg.file_name}` : ""),
+    last_message_at: new Date().toISOString(),
+    last_message_by: currentUser.id,
+  })
+  .eq("id", conversation.id);
       qc.invalidateQueries({ queryKey: ["chat-conversations"] });
     },
   });
 
   const updateConvMutation = useMutation({
-    mutationFn: (data) => base44.entities.ChatConversation.update(conversation.id, data),
+    mutationFn: async (data) => {
+  const { error } = await supabase
+    .from("chat_conversations")
+    .update(data)
+    .eq("id", conversation.id);
+
+  if (error) throw error;
+},
     onSuccess: () => qc.invalidateQueries({ queryKey: ["chat-conversations"] }),
   });
 
@@ -142,7 +167,9 @@ export default function ChatWindow({ conversation, messages, currentUser, allUse
     const file = e.target.files[0];
     if (!file) return;
     setUploading(true);
-    const { file_url } = await base44.integrations.Core.UploadFile({ file });
+    alert("File uploads have not been migrated to Supabase Storage yet.");
+setUploading(false);
+return;
     const isImg = file.type.startsWith("image/");
     sendMutation.mutate({
       company_id: conversation.company_id,
