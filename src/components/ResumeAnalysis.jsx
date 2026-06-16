@@ -9,6 +9,7 @@ export default function ResumeAnalysis({ candidate, onCandidateUpdate }) {
   const [jd, setJd] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [matchReport, setMatchReport] = useState(null);
+}
 
   const handleResumeUpload = async (e) => {
   const file = e.target.files[0];
@@ -61,11 +62,12 @@ export default function ResumeAnalysis({ candidate, onCandidateUpdate }) {
     setMatchReport(result);
   } catch (err) {
     console.error(err);
-  } finally {
-    setAnalyzing(false);
-  }
+ } finally {
+  setAnalyzing(false);
+}
 };
 
+const scoreColor = (score) => {
   const scoreColor = (score) => {
     if (score >= 75) return "text-emerald-600";
     if (score >= 50) return "text-amber-600";

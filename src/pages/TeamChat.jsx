@@ -9,7 +9,15 @@ import NewConversationDialog from "@/components/chat/NewConversationDialog";
 import { getUnreadCount } from "@/components/chat/chatUtils";
 
 export default function TeamChat() {
-  const { user } = useAuth();
+  const { user, isLoadingAuth } = useAuth();
+
+if (isLoadingAuth) {
+  return <div style={{ padding: "20px", color: "white" }}>Loading auth...</div>;
+}
+
+if (!user) {
+  return <div style={{ padding: "20px", color: "red" }}>No authenticated user</div>;
+}
   const companyId = "default";
   const qc = useQueryClient();
 
@@ -95,7 +103,11 @@ export default function TeamChat() {
 
     return result;
   },
-
+  onSuccess: (conv) => {
+    qc.invalidateQueries({ queryKey: ["chat-conversations"] });
+    setSelectedConv(conv);
+  },
+});
   const handleNewConversation = ({ type, member, name, description, members }) => {
     if (type === "direct") {
       // Check if DM already exists
@@ -129,9 +141,13 @@ export default function TeamChat() {
     }
   };
 
-  if (!user) return null;
+console.log("USER", user);
+console.log("ALL USERS", allUsers);
+console.log("CONVERSATIONS", conversations);
+console.log("MY CONVERSATIONS", myConversations);
 
-  return (
+if (!user) return null;
+return (
     <div className="flex h-[calc(100vh-56px)] bg-background overflow-hidden">
       {/* Sidebar */}
       <div className="w-72 shrink-0 flex flex-col h-full">

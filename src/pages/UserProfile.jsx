@@ -21,48 +21,47 @@ export default function UserProfile() {
   });
 
   const roleLabel = ROLE_LABELS[user?.role] || user?.role || "User";
-  const initials = (user?.full_name || "U").split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
+const initials = (user?.full_name || "U")
+  .split(" ")
+  .map((w) => w[0])
+  .join("")
+  .toUpperCase()
+  .slice(0, 2);
 
-  const handleAvatarUpload = async () => {
+const handleAvatarUpload = async () => {
   toast.info("Avatar uploads will be migrated to Supabase Storage later.");
 };
-  toast.info("Avatar uploads will be migrated to Supabase Storage next.");
-};
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setUploading(true);
-    try {
-      const { file_url } = await .integrations.Core.UploadFile({ file });
-      //await .updateMe({ photo_url: file_url });
-     // await checkUserAuth();
-     // toast.success("Profile picture updated");
-   // } catch (err) {
-     // toast.error("Failed to upload picture");
-   // } finally {
-   //   setUploading(false);
-   // }
- // };
+
+const handleSave = async (e) => {
+  e.preventDefault();
 
   try {
-  const { error } = await supabase.auth.updateUser({
-    data: {
-      full_name: form.full_name,
-      phone: form.phone,
-      linkedin_url: form.linkedin_url,
-    },
-  });
+    setSaving(true);
 
-  if (error) throw error;
+    const { error } = await supabase.auth.updateUser({
+      data: {
+        full_name: form.full_name,
+        phone: form.phone,
+        linkedin_url: form.linkedin_url,
+      },
+    });
 
-  toast.success("Profile updated successfully");
+    if (error) throw error;
 
-  window.location.reload();
-} catch (err) {
-  toast.error("Failed to update profile");
-}
+    toast.success("Profile updated successfully");
 
-  return (
-    <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-8">
+    if (checkUserAuth) {
+      await checkUserAuth();
+    }
+  } catch (err) {
+    console.error(err);
+    toast.error("Failed to update profile");
+  } finally {
+    setSaving(false);
+  }
+};
+  return(
+        <div className="p-4 md:p-8 max-w-2xl mx-auto space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-foreground">My Profile</h1>
         <p className="text-muted-foreground text-sm mt-1">Manage your personal information and account settings</p>

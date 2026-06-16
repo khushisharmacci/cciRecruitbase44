@@ -32,7 +32,7 @@ export default function PendingApproval() {
         <p className="text-xs text-muted-foreground">
           If you believe this is an error, please contact your company administrator.
         </p>
-        <Button variant="outline" className="gap-2" <Button
+        <Button
   variant="outline"
   className="gap-2"
   onClick={async () => {
@@ -43,8 +43,6 @@ export default function PendingApproval() {
   <LogOut className="h-4 w-4" />
   Sign Out
 </Button>
-          <LogOut className="h-4 w-4" /> Sign Out
-        </Button>
       </div>
     </div>
   );

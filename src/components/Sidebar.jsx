@@ -14,6 +14,8 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
   const location = useLocation();
 
   const role = user?.role || "recruiter";
+  console.log("SIDEBAR USER", user);
+  console.log("ROLE", user?.role);
   const roleLabel = ROLE_LABELS[role] || "Recruiter";
 
   const buildNav = () => {
@@ -84,8 +86,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
     <div className="flex flex-col h-full">
       <div className="px-4 py-5 flex items-center gap-3">
         <img
-          src="https://media.
-          .com/images/public/6a1d46e236a02f5dd2633cca/d39c47d04_NewCCI.jpeg"
+          src="/ccilogo.jpeg"
           alt="CCI Logo"
           className={cn("w-auto shrink-0 rounded-lg object-contain", collapsed ? "h-9" : "h-12")}
         />

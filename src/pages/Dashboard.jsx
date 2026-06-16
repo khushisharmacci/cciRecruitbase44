@@ -10,7 +10,7 @@ import { Calendar, Clock, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 
-const HERO_IMG = "https://media.base44.com/images/public/6a1d46e236a02f5dd2633cca/058e3bba6_generated_image.png";
+const HERO_IMG = "banner2.jpeg";
 
 export default function Dashboard() {
   const { user } = useAuth();

@@ -13,7 +13,10 @@ import {
 import { cn } from "@/lib/utils";
 
 function todayStr() {return format(new Date(), "yyyy-MM-dd");}
-function nowStr() {return format(new Date(), "HH:mm");}
+function nowStr() {
+  return format(new Date(), "HH:mm");
+}
+
 
 export default function Attendance() {
   const { user } = useAuth();
@@ -24,42 +27,71 @@ export default function Attendance() {
   const [activeChart, setActiveChart] = useState("weekly");
 
   const { data: records = [], isLoading } = useQuery({
-  queryKey: ["attendance"],
+  queryKey: ["attendance_records"],
   queryFn: async () => {
     const { data, error } = await supabase
       .from("attendance_records")
       .select("*")
-      .order("date", { ascending: false });
+      .order("attendance_date", { ascending: false })
 
-    if (error) throw error;
+    if (error) {
+  console.error("CHECK IN ERROR");
+console.log(JSON.stringify(error, null, 2));
+  throw error;
+}
+
+console.log("CHECK IN SUCCESS");
+console.log(data);
 
     return data || [];
   },
 });
 
   const today = todayStr();
-  const myTodayRecord = records.find(
-    (r) => r.employee_name === (user?.full_name || user?.email) && r.date === today
-  );
-
+  console.log("USER ID", user?.id);
+  console.log("TODAY", today);
+  console.log("RECORDS", records);
+  const myTodayRecord = records
+  .filter(
+    r =>
+      r.user_id === user?.id &&
+      r.attendance_date === today
+  )
+  .sort(
+    (a, b) =>
+      new Date(b.created_at) - new Date(a.created_at)
+  )[0];
+console.log("TODAY RECORD", myTodayRecord);
   const checkInMutation = useMutation({
   mutationFn: async () => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("attendance_records")
       .insert([
         {
-          employee_name: user?.full_name || user?.email || "Unknown",
-          employee_id: user?.id,
-          date: today,
-          check_in: nowStr(),
-          status: "Present",
+          user_id: user.id,
+      company_id: user.company_id || null,
+      attendance_date: today,
+      check_in: nowStr(),
+      status: "Present",
         },
-      ]);
+      ])
+      .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error("CHECK IN ERROR", error);
+      throw error;
+    }
+
+    console.log("CHECK IN SUCCESS", data);
+
+    return data;
   },
-  onSuccess: () =>
-    queryClient.invalidateQueries({ queryKey: ["attendance"] }),
+
+  onSuccess: () => {
+    queryClient.invalidateQueries({
+      queryKey: ["attendance_records"],
+    });
+  },
 });
 
   const checkOutMutation = useMutation({
@@ -74,28 +106,35 @@ export default function Attendance() {
 
       hours = (h2 * 60 + m2 - (h1 * 60 + m1)) / 60;
     }
-
-    const { error } = await supabase
+console.log("CHECKOUT RECORD", myTodayRecord);
+console.log("CHECKOUT ID", myTodayRecord?.id);
+    const { data, error } = await supabase
       .from("attendance_records")
       .update({
-        check_out: nowStr(),
-        total_hours: Math.max(0, parseFloat(hours.toFixed(2))),
-      })
-      .eq("id", myTodayRecord.id);
+  check_out: nowStr(),
+})
+      .eq("id", myTodayRecord?.id)
+      .select();
+    if (error) {
+  console.error("CHECK IN ERROR", error);
+  throw error;
+}
 
-    if (error) throw error;
+console.log("CHECK IN SUCCESS");
   },
   onSuccess: () =>
-    queryClient.invalidateQueries({ queryKey: ["attendance"] }),
+    queryClient.invalidateQueries({ queryKey: ["attendance_records"] }),
 });
 
   // KPI calculations
-  const myRecords = records.filter((r) => r.employee_name === (user?.full_name || user?.email));
+  const myRecords = records.filter(
+  r => r.user_id === user?.id
+);
   const todayHours = myTodayRecord?.total_hours || 0;
   const weekStart = format(startOfWeek(new Date()), "yyyy-MM-dd");
   const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
-  const weeklyHours = myRecords.filter((r) => r.date >= weekStart).reduce((s, r) => s + (r.total_hours || 0), 0);
-  const monthlyHours = myRecords.filter((r) => r.date >= monthStart).reduce((s, r) => s + (r.total_hours || 0), 0);
+  const weeklyHours = myRecords.filter((r) => r.attendance_date >= weekStart).reduce((s, r) => s + (r.total_hours || 0), 0);
+  const monthlyHours = myRecords.filter((r) => r.attendance_date >= monthStart).reduce((s, r) => s + (r.total_hours || 0), 0);
   const totalDays = myRecords.length;
   const presentDays = myRecords.filter((r) => r.status === "Present").length;
   const attendancePct = totalDays > 0 ? Math.round(presentDays / totalDays * 100) : 0;
@@ -105,7 +144,7 @@ export default function Attendance() {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
     const dateStr = format(d, "yyyy-MM-dd");
-    const rec = myRecords.find((r) => r.date === dateStr);
+    const rec = myRecords.find((r) => r.attendance_date === dateStr);
     return { day: format(d, "EEE"), hours: rec?.total_hours || 0 };
   });
 
@@ -115,7 +154,7 @@ export default function Attendance() {
     const start = new Date(end);start.setDate(start.getDate() - 6);
     const s = format(start, "yyyy-MM-dd"),e = format(end, "yyyy-MM-dd");
     const hrs = records.filter((r) =>
-    r.employee_name === (user?.full_name || user?.email) && r.date >= s && r.date <= e
+    r.employee_name === (user?.full_name || user?.email) && r.attendance_date >= s && r.attendance_date <= e
     ).reduce((acc, r) => acc + (r.total_hours || 0), 0);
     return { week: `W${4 - i}`, hours: parseFloat(hrs.toFixed(1)) };
   }).reverse();
@@ -123,7 +162,7 @@ export default function Attendance() {
   // Filtered table
   const filtered = records.filter((r) => {
     const matchEmp = !filterEmployee || r.employee_name?.toLowerCase().includes(filterEmployee.toLowerCase());
-    const matchDate = !filterDate || r.date === filterDate;
+    const matchDate = !filterDate || r.attendance_date === filterDate;
     return matchEmp && matchDate;
   });
 
@@ -145,23 +184,26 @@ export default function Attendance() {
             <p className="text-sm text-muted-foreground">
               {myTodayRecord ?
               myTodayRecord.check_out ?
-              `Checked out at ${myTodayRecord.check_out} · ${myTodayRecord.total_hours}h` :
+              `Checked out at ${myTodayRecord.check_out}` :
               `Checked in at ${myTodayRecord.check_in}` :
               "Not checked in today"}
             </p>
           </div>
         </div>
         <div className="flex gap-3">
-          {!myTodayRecord &&
-          <Button onClick={() => checkInMutation.mutate()} disabled={checkInMutation.isPending} className="gap-2">
-              <LogIn className="h-4 w-4" /> Check In
-            </Button>
-          }
-          {myTodayRecord && !myTodayRecord.check_out &&
-          <Button onClick={() => checkOutMutation.mutate()} disabled={checkOutMutation.isPending} variant="outline" className="gap-2">
-              <LogOut className="h-4 w-4" /> Check Out
-            </Button>
-          }
+          {myTodayRecord?.check_out ? (
+  <Button disabled>
+    Checked Out
+  </Button>
+) : myTodayRecord?.check_in ? (
+  <Button onClick={() => checkOutMutation.mutate()}>
+    Check Out
+  </Button>
+) : (
+  <Button onClick={() => checkInMutation.mutate()}>
+    Check In
+  </Button>
+)}
         </div>
       </div>
 
@@ -246,7 +288,7 @@ export default function Attendance() {
                 {filtered.map((r) =>
               <tr key={r.id} className="hover:bg-muted/30">
                     <td className="px-4 py-3 text-sm font-medium text-foreground">{r.employee_name}</td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">{r.date}</td>
+                    <td className="px-4 py-3 text-sm text-muted-foreground">{r.attendance_date}</td>
                     <td className="px-4 py-3 text-sm text-foreground">{r.check_in || "—"}</td>
                     <td className="px-4 py-3 text-sm text-foreground">{r.check_out || "—"}</td>
                     <td className="px-4 py-3 text-sm font-medium text-foreground">{r.total_hours ? `${r.total_hours}h` : "—"}</td>

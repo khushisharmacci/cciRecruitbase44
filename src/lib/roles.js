@@ -1,44 +1,28 @@
 // Role hierarchy and permission definitions
 
 export const ROLES = {
-  SUPER_ADMIN: "super_admin",
-  COMPANY_ADMIN: "company_admin",
-  HR_MANAGER: "hr_manager",
+  CEO: "ceo",
+  ADMIN: "admin",
+  TEAM_LEAD: "team_lead",
   RECRUITER: "recruiter",
-  TEAM_MEMBER: "team_member",
-  VIEWER: "viewer",
-  CEO: "ceo", // legacy - treated as super_admin
-  ADMIN: "admin", // legacy - treated as company_admin
-  TEAM_LEAD: "team_lead", // legacy - treated as hr_manager
-  EMPLOYEE: "employee", // legacy - treated as team_member
+  EMPLOYEE: "employee",
 };
 
 export const ROLE_LABELS = {
-  super_admin: "Super Admin",
-  company_admin: "Company Admin",
-  hr_manager: "HR Manager",
+  ceo: "CEO",
+  admin: "Admin",
+  team_lead: "Team Leader",
   recruiter: "Recruiter",
-  team_member: "Team Member",
-  viewer: "Viewer",
-  // legacy
-  ceo: "CEO (Super Admin)",
-  admin: "Admin (Company Admin)",
-  team_lead: "Team Lead (HR Manager)",
-  employee: "Employee (Team Member)",
+  employee: "Employee",
 };
 
 // Canonical role order (lowest → highest)
 export const ROLE_HIERARCHY = [
-  "viewer",
-  "team_member",
-  "employee",     // legacy
+  "employee",
   "recruiter",
-  "team_lead",    // legacy
-  "hr_manager",
-  "admin",        // legacy
-  "company_admin",
-  "super_admin",
-  "ceo",          // legacy top
+  "team_lead",
+  "admin",
+  "ceo",
 ];
 
 export function getRoleLevel(role) {
@@ -64,47 +48,76 @@ export function assignableRoles(userRole) {
 
 // The new canonical roles for display in admin UI
 export const ASSIGNABLE_ROLE_LIST = [
-  "viewer",
-  "team_member",
+  "employee",
   "recruiter",
-  "hr_manager",
-  "company_admin",
-  "super_admin",
+  "team_lead",
+  "admin",
+  "ceo",
 ];
 
 // ─── Permission matrix ────────────────────────────────────────────────────────
 // All permissions are derived from role level — add new ones here without DB changes.
 
 export const can = {
-  // Navigation / module access
-  viewDashboard: (u) => true,
-  viewDataCenter: (u) => true,                    // ALL authenticated users
-  viewRecruitment: (u) => isAtLeast(u, "recruiter"),
-  viewRecruiterIQ: (u) => isAtLeast(u, "recruiter"),
-  viewAnalytics: (u) => isAtLeast(u, "hr_manager") || isAtLeast(u, "team_lead"),
-  viewCRM: (u) => isAtLeast(u, "recruiter"),
-  viewCompanies: (u) => isAtLeast(u, "recruiter"),
-  viewTeams: (u) => isAtLeast(u, "hr_manager") || isAtLeast(u, "team_lead"),
-  viewTargets: (u) => isAtLeast(u, "recruiter"),
-  viewRevenue: (u) => isAtLeast(u, "company_admin") || isAtLeast(u, "admin"),
-  viewAttendance: (u) => true,
+  viewDashboard: () => true,
+  viewDataCenter: () => true,
+  viewRecruitment: () => true,
+  viewRecruiterIQ: () => true,
+  viewAnalytics: () => true,
+  viewCRM: () => true,
+  viewCompanies: () => true,
+  viewTeams: () => true,
+  viewTargets: () => true,
+  viewAttendance: () => true,
 
-  // Data Centre permissions
-  uploadFiles: (u) => true,                       // ALL roles can upload
-  editFiles: (u) => isAtLeast(u, "recruiter"),    // Recruiter and above can edit/delete
-  deleteFiles: (u) => isAtLeast(u, "recruiter"),
+  // CEO only
+  viewRevenue: (u) => u?.role === "ceo",
 
-  // Admin capabilities
-  manageUsers: (u) => isAtLeast(u, "company_admin") || isAtLeast(u, "super_admin") || isAtLeast(u, "admin") || isAtLeast(u, "ceo"),
-  manageSettings: (u) => isAtLeast(u, "super_admin") || isAtLeast(u, "ceo"),
-  viewOrgSettings: (u) => isAtLeast(u, "super_admin") || isAtLeast(u, "ceo"),
-  approveUsers: (u) => isAtLeast(u, "company_admin") || isAtLeast(u, "super_admin") || isAtLeast(u, "admin") || isAtLeast(u, "ceo"),
-  suspendUsers: (u) => isAtLeast(u, "company_admin") || isAtLeast(u, "super_admin") || isAtLeast(u, "admin") || isAtLeast(u, "ceo"),
+  // CEO + Admin only
+  manageUsers: (u) =>
+    ["ceo", "admin"].includes(u?.role),
 
-  // Legacy
-  manageAttendance: (u) => isAtLeast(u, "team_lead") || isAtLeast(u, "hr_manager"),
-  isCEO: (u) => u?.role === "ceo" || u?.role === "super_admin",
+  manageSettings: (u) =>
+    ["ceo", "admin"].includes(u?.role),
+
+  viewOrgSettings: (u) =>
+    ["ceo", "admin"].includes(u?.role),
+
+  approveUsers: (u) =>
+    ["ceo", "admin"].includes(u?.role),
+
+  suspendUsers: (u) =>
+    ["ceo", "admin"].includes(u?.role),
+
+  uploadFiles: () => true,
+  editFiles: () => true,
+  deleteFiles: () => true,
+
+  isCEO: (u) => u?.role === "ceo",
 };
+
+export function canViewAttendanceOf(viewer, target) {
+  if (!viewer || !target) return false;
+
+  if (viewer.id === target.id) return true;
+
+  const level = {
+    employee: 0,
+    recruiter: 1,
+    team_lead: 2,
+    admin: 3,
+    ceo: 4,
+  };
+
+  if (
+    viewer.role === "employee" ||
+    viewer.role === "recruiter"
+  ) {
+    return false;
+  }
+
+  return level[target.role] <= level[viewer.role];
+}
 
 // User account statuses
 export const USER_STATUS = {

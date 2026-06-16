@@ -10,6 +10,7 @@ export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user } = useAuth();
+  console.log("LAYOUT USER", user);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -46,5 +47,4 @@ export default function Layout() {
         </main>
       </div>
     </div>
-  );
-}
+  );}

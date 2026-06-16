@@ -30,18 +30,9 @@ export default function DataCenter() {
   const [openFile, setOpenFile] = useState(null);
   const [showUpload, setShowUpload] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  
 
-  const { data: folders = [], isLoading: loadingFolders } = useQuery({
-    queryKey: ["data-folders", companyId],
-    queryFn: async () => {
-  const { data, error } = await supabase
-    .from("data_folders")
-    .select("*");
 
-  if (error) throw error;
-  return data || [];
-}
-  });
 
   const { data: files = [], isLoading: loadingFiles } = useQuery({
     queryKey: ["data-files", companyId],
@@ -56,18 +47,28 @@ export default function DataCenter() {
 }
   });
 
-  const { data: folder, error } = await supabase
-  .from("data_folders")
-  .insert([
-    {
-      name,
-      company_id: companyId,
-    },
-  ])
-  .select()
-  .single();
+const handleCreateFolder = async (name) => {
+  const { error } = await supabase
+    .from("data_folders")
+    .insert([
+      {
+        name,
+        company_id: companyId,
+      },
+    ]);
 
-if (error) throw error;
+  if (error) {
+    console.error(error);
+    toast.error("Failed to create folder");
+    return;
+  }
+
+  queryClient.invalidateQueries({
+    queryKey: ["data-folders"],
+  });
+
+  toast.success(`Folder "${name}" created`);
+};  
 
   const handleDeleteFile = async (file) => {
     setDeletingId(file.id);

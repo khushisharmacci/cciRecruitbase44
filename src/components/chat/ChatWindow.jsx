@@ -98,7 +98,7 @@ export default function ChatWindow({ conversation, messages, currentUser, allUse
 
   return data;
 },
-    onSuccess: (newMsg) => {
+    onSuccess: async (newMsg) => {
       qc.invalidateQueries({ queryKey: ["chat-messages"] });
       await supabase
   .from("chat_conversations")

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { can } from "@/lib/roles";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -22,6 +23,9 @@ const statusColor = { Pending: "bg-amber-500/15 text-amber-300", Received: "bg-e
 
 export default function Revenue() {
   const { user } = useAuth();
+  console.log("REVENUE USER", user);
+  console.log("ROLE", user?.role);
+  console.log("CAN VIEW REVENUE", can.viewRevenue(user));
   const queryClient = useQueryClient();
   const companyId = "default";
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -78,10 +82,16 @@ export default function Revenue() {
     setDeleteId(null);
   }
 });
-
-  if (user?.role !== "admin") {
-    return <div className="flex items-center justify-center h-full py-20"><p className="text-muted-foreground">Revenue data is only accessible to administrators.</p></div>;
-  }
+console.log("REVENUE PAGE USER", user);
+console.log("REVENUE PAGE ROLE", user?.role);
+console.log("CAN VIEW REVENUE", can.viewRevenue(user));
+  if (!can.viewRevenue(user)) {
+  return (
+    <div className="flex items-center justify-center h-full text-muted-foreground">
+      Revenue data is only accessible to authorized users.
+    </div>
+  );
+}
 
   const totalRevenue = revenue.reduce((s, r) => s + (r.amount || 0), 0);
   const receivedRevenue = revenue.filter((r) => r.status === "Received").reduce((s, r) => s + (r.amount || 0), 0);

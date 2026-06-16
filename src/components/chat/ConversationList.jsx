@@ -9,9 +9,9 @@ export default function ConversationList({ conversations, selectedId, onSelect, 
   const [search, setSearch] = useState("");
 
   const filtered = conversations.filter(c => {
-    const name = getConversationName(c, currentUser.id).toLowerCase();
-    return name.includes(search.toLowerCase());
-  });
+  const name = getConversationName(c, currentUser?.id || "").toLowerCase();
+  return name.includes(search.toLowerCase());
+});
 
   return (
     <div className="flex flex-col h-full bg-card border-r border-border">

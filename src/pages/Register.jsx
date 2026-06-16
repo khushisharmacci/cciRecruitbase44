@@ -159,63 +159,28 @@ setStep("otp");
   };
 
   const handleRoleChoice = (choice) => {
-    setIsCeo(choice);
-    if (choice) {
-      setStep("company");
-    } else {
-      // Non-CEO: set as pending_approval — admin must assign role
-     // .updateMe({
-     //   role: "viewer",
-      //  account_status: "pending_approval",
-     //   onboarding_complete: false,
-    //  }).catch(() => {});
-     // window.location.href = "/pending";
-   // }
- // };
+  setIsCeo(choice);
+
+  if (choice) {
+    setStep("company");
+  } else {
+    window.location.href = "/pending";
+  }
+};
 
   const uploadFile = async () => {
   return null;
 };
 
   const handleCompanySetup = async () => {
-    toast({
-  title: "Not migrated yet",
-  description: "Company onboarding is still being migrated to Supabase.",
-});
+  toast({
+    title: "Not migrated yet",
+    description: "Company onboarding is still being migrated to Supabase.",
+  });
 
-return;
-    setError("");
-    setLoading(true);
-    try {
-      const [regCertUrl, gstCertUrl, panCardUrl, logoUrl, profilePdfUrl] = await Promise.all([
-      uploadFile(files.reg_cert),
-      uploadFile(files.gst_cert),
-      uploadFile(files.pan_card),
-      uploadFile(files.logo),
-      uploadFile(files.profile_pdf)]
-      );
+  return;
+};
 
-      // Generate a unique tenant/company ID for this organization
-      const companyId = `co_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-      toast({
-  title: "Company onboarding pending",
-  description: "Company profile migration to Supabase is not completed yet.",
-});
-
-      // Stamp the CEO user with the company_id for tenant isolation
-      //await.updateMe({
-     //   role: "super_admin",
-       // account_status: "active",
-       // company_id: companyId,
-       // company_name: company.name,
-       // organization_name: company.name,
-       // company_logo_url: logoUrl,
-       // onboarding_complete: true
-    //  });
-
-      // Audit log
-      
   if (step === "otp") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">

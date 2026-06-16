@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { parseISO, isPast, isToday, isTomorrow, isThisWeek, format } from "date-fns";
 import { Plus, Calendar, List, BarChart2, Search, Filter, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,7 +34,7 @@ export default function EventCenter() {
   const [editEvent, setEditEvent] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
 
-  const { data: events = [], isLoading } = useQuery({
+const { data: events = [], isLoading } = useQuery({
   queryKey: ["events"],
   queryFn: async () => {
     const { data, error } = await supabase
@@ -48,31 +48,50 @@ export default function EventCenter() {
   },
 });
 
+  const createMutation = useMutation({
   mutationFn: async (data) => {
-  const { error } = await supabase
-    .from("events")
-    .insert([data]);
+    const { error } = await supabase
+      .from("events")
+      .insert([data]);
 
-  if (error) throw error;
-},
+    if (error) throw error;
+  },
+  onSuccess: () => {
+    qc.invalidateQueries({ queryKey: ["events"] });
+    setFormOpen(false);
+  },
+});
 
+const updateMutation = useMutation({
   mutationFn: async ({ id, data }) => {
-  const { error } = await supabase
-    .from("events")
-    .update(data)
-    .eq("id", id);
+    const { error } = await supabase
+      .from("events")
+      .update(data)
+      .eq("id", id);
 
-  if (error) throw error;
-},
+    if (error) throw error;
+  },
+  onSuccess: () => {
+    qc.invalidateQueries({ queryKey: ["events"] });
+    setFormOpen(false);
+    setEditEvent(null);
+  },
+});
 
+const deleteMutation = useMutation({
   mutationFn: async (id) => {
-  const { error } = await supabase
-    .from("events")
-    .delete()
-    .eq("id", id);
+    const { error } = await supabase
+      .from("events")
+      .delete()
+      .eq("id", id);
 
-  if (error) throw error;
-},
+    if (error) throw error;
+  },
+  onSuccess: () => {
+    qc.invalidateQueries({ queryKey: ["events"] });
+    setDeleteTarget(null);
+  },
+});
 
   const handleSave = (data) => {
     if (editEvent) updateMutation.mutate({ id: editEvent.id, data });else

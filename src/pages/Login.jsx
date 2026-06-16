@@ -28,8 +28,10 @@ const ROLE_WELCOME = {
 function LogoHeader() {
   return (
     <div className="flex flex-col items-center mb-8">
-      <img
-        src="https://media.base44.com/images/public/6a1d46e236a02f5dd2633cca/d39c47d04_NewCCI.jpeg"
+  <img
+  src="/ccilogo.jpeg"
+  alt="CCI Logo"
+
         alt="CCI Logo"
         className="h-16 w-16 object-contain rounded-2xl mb-3 shadow-md" />
       
@@ -69,25 +71,38 @@ export default function Login() {
   setLoading(true);
 
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
+  const { data, error } =
+    await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (error) throw error;
+  console.log("LOGIN DATA", data);
+  console.log("LOGIN ERROR", error);
 
-    console.log("Logged in user:", data.user);
+  if (error) throw error;
 
-    window.location.href = "/";
-  } catch (err) {
-    setError(err.message || "Invalid email or password");
-  }
+  window.location.href = "/";
+} catch (err) {
+  console.error(err);
+  setError(JSON.stringify(err));
+}
 
   setLoading(false);
 };
 
   const handleGoogle = async () => {
-  alert("Google login not migrated yet");
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: window.location.origin,
+    },
+  });
+
+  if (error) {
+    console.error(error);
+    setError(error.message);
+  }
 };
 
   if (mode === "platform") {
@@ -152,7 +167,9 @@ export default function Login() {
         <div>
           <div className="flex items-center gap-3 mb-12">
             <img
-              src="https://media.base44.com/images/public/6a1d46e236a02f5dd2633cca/d39c47d04_NewCCI.jpeg"
+  src="/ccilogo.jpeg"
+  alt="CCI Logo"
+
               alt="CCI"
               className="h-10 w-10 rounded-xl object-contain cursor-pointer"
               onClick={handleLogoClick} />
