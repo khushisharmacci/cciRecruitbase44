@@ -32,9 +32,8 @@ console.log("RECRUITER ERROR", error);
       ...(recruiter || {}),
     };
 
-    console.log("DEPLOYED RECRUITER PROFILE", recruiterProfile);
-console.log("DEPLOYED MERGED USER", mergedUser);
-console.log("DEPLOYED ROLE", mergedUser?.role);
+    console.log("RECRUITER PROFILE", recruiter);
+console.log("MERGED USER", mergedUser);
     setUser(mergedUser);
   };
 
