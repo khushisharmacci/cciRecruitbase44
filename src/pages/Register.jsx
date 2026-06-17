@@ -11,48 +11,7 @@ import { toast } from "@/components/ui/use-toast";
 
 // --- Step components ---
 
-function StepAccount({ email, setEmail, password, setPassword, confirmPassword, setConfirmPassword, onSubmit, loading, error, onGoogle }) {
-  return (
-    <div className="space-y-4">
-      <Button variant="outline" className="w-full h-12 text-sm font-medium" onClick={onGoogle}>
-        <GoogleIcon className="w-5 h-5 mr-2" /> Continue with Google
-      </Button>
-      <div className="relative">
-        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-card px-3 text-muted-foreground">or</span>
-        </div>
-      </div>
-      {error && <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}
-      <form onSubmit={onSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label>Email</Label>
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input type="email" autoComplete="email" autoFocus placeholder="you@company.com" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10 h-12" required />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label>Password</Label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input type="password" autoComplete="new-password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 h-12" required />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label>Confirm Password</Label>
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input type="password" autoComplete="new-password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="pl-10 h-12" required />
-          </div>
-        </div>
-        <Button type="submit" className="w-full h-12 font-medium" disabled={loading}>
-          {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Creating account...</> : <>Continue <ChevronRight className="w-4 h-4 ml-1" /></>}
-        </Button>
-      </form>
-    </div>);
 
-}
 
 function FileUploadField({ label, required, onChange, value }) {
   return (
@@ -120,6 +79,20 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const [company, setCompany] = useState({ name: "", address: "", phone: "" });
   const [files, setFiles] = useState({});
+
+const handleGoogle = async () => {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: window.location.origin,
+    },
+  });
+
+  if (error) {
+    console.error(error);
+    setError(error.message);
+  }
+};
 
   const handleAccountSubmit = async (e) => {
     e.preventDefault();
@@ -298,11 +271,17 @@ setStep("otp");
         </div>
         <div className="bg-card rounded-2xl shadow-sm border border-border p-8">
           <StepAccount
-            email={email} setEmail={setEmail}
-            password={password} setPassword={setPassword}
-            confirmPassword={confirmPassword} setConfirmPassword={setConfirmPassword}
-            onSubmit={handleAccountSubmit} loading={loading} error={error}
-            onGoogle={() => alert("Google login not migrated yet")} />
+  email={email}
+  setEmail={setEmail}
+  password={password}
+  setPassword={setPassword}
+  confirmPassword={confirmPassword}
+  setConfirmPassword={setConfirmPassword}
+  onSubmit={handleAccountSubmit}
+  loading={loading}
+  error={error}
+  onGoogle={handleGoogle}
+/>
           
         </div>
         <p className="text-center text-sm text-muted-foreground mt-6">
