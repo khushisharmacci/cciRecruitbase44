@@ -31,7 +31,17 @@ export default function DataCenter() {
   const [showUpload, setShowUpload] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   
+const { data: folders = [], isLoading: loadingFolders } = useQuery({
+  queryKey: ["data-folders", companyId],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("data_folders")
+      .select("*");
 
+    if (error) throw error;
+    return data || [];
+  },
+});
 
 
   const { data: files = [], isLoading: loadingFiles } = useQuery({
@@ -103,7 +113,6 @@ const handleCreateFolder = async (name) => {
   });
 
   const isLoading = loadingFolders || loadingFiles;
-
   return (
     <>
       {/* Spreadsheet Viewer overlay */}

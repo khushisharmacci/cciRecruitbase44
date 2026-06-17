@@ -39,6 +39,8 @@ function App() {
       <QueryClientProvider client={queryClientInstance}>
         <Router>
   <Routes>
+    <Route path="/" element={<Navigate to="/login" replace />} />
+    
     <Route element={<Layout />}>
       <Route path="/dashboard" element={<Dashboard />} />
 

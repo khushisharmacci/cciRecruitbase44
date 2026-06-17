@@ -15,18 +15,20 @@ const HERO_IMG = "banner2.jpeg";
 export default function Dashboard() {
   const { user } = useAuth();
   const { companyId } = useTenant();
+
   const { data: candidates = [] } = useQuery({
-  queryKey: ["candidates"],
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from("candidates")
-      .select("*");
+    queryKey: ["candidates"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("candidates")
+        .select("*");
 
-    if (error) throw error;
+      if (error) throw error;
 
-    return data || [];
-  }
-});
+      return data || [];
+    },
+  });
+  
   const { data: positions = [] } = useQuery({
   queryKey: ["positions"],
   queryFn: async () => {

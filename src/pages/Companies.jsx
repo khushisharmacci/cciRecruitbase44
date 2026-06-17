@@ -21,16 +21,24 @@ export default function Companies() {
   const [deleteId, setDeleteId] = useState(null);
   const [form, setForm] = useState({ name: "", industry: "", contact_person: "", contact_email: "", contact_phone: "", address: "", status: "Active", notes: "" });
 
-  queryFn: async () => {
-  const { data, error } = await supabase
-    .from("clients")
-    .select("*")
-    .order("created_at", { ascending: false });
 
-  if (error) throw error;
+ const {
+    data: clients = [],
+    isLoading,
+  } = useQuery({
+    queryKey: ["clients"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("clients")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-  return data || [];
-};
+      if (error) throw error;
+
+      return data || [];
+    },
+  });
+
 
   const createMutation = useMutation({
     mutationFn: async (data) => {
@@ -74,14 +82,20 @@ export default function Companies() {
     createMutation.mutate(form);
   };
 
-  const filtered = clients.filter((c) => !search || c.name?.toLowerCase().includes(search.toLowerCase()) || c.industry?.toLowerCase().includes(search.toLowerCase()));
+  const filtered = clients.filter((c) =>
+  !search ||
+  c.name?.toLowerCase().includes(search.toLowerCase()) ||
+  c.industry?.toLowerCase().includes(search.toLowerCase())
+);
 
   const statusColor = { Active: "bg-emerald-500/15 text-emerald-300", Inactive: "bg-gray-500/15 text-gray-400", Prospect: "bg-blue-500/15 text-blue-300" };
 
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div><h1 className="text-2xl font-bold text-foreground">Companies</h1><p className="text-muted-foreground text-sm">{clients.length} client companies</p></div>
+        <div><h1 className="text-2xl font-bold text-foreground">Companies</h1><p className="text-muted-foreground text-sm">
+  {clients.length} client companies
+</p> </div>
         <Button onClick={openCreate} className="gap-2"><Plus className="h-4 w-4" /> Add Company</Button>
       </div>
 
