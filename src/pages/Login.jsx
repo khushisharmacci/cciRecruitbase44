@@ -82,7 +82,7 @@ export default function Login() {
 
   if (error) throw error;
 
-  window.location.href = "/";
+  window.location.href = "/dashboard";
 } catch (err) {
   console.error(err);
   setError(JSON.stringify(err));

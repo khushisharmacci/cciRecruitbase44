@@ -1,18 +1,28 @@
 import { supabase } from "./supabase";
 
-export const signIn = async (email, password) => {
-  return await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-};
+console.log("LOGIN CLICKED");
+console.log("EMAIL", email);
 
-export const signUp = async (email, password) => {
-  return await supabase.auth.signUp({
+const { data, error } =
+  await supabase.auth.signInWithPassword({
     email,
     password,
   });
-};
+
+console.log("LOGIN DATA", data);
+console.log("LOGIN ERROR", error);
+
+console.log("EMAIL", email);
+console.log("PASSWORD", password);
+
+const { data, error } =
+  await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+console.log("LOGIN DATA", data);
+console.log("LOGIN ERROR", error);
 
 export const signOut = async () => {
   return await supabase.auth.signOut();
