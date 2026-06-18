@@ -160,16 +160,18 @@ const isMaster = true;
   setInviting(true);
 
   try {
-    const { error } = await supabase
-      .from("users")
-      .insert([
-        {
+    const { data, error } = await supabase.functions.invoke(
+      "quick-handler",
+      {
+        body: {
           email: inviteEmail.trim(),
           role: inviteRole,
-          account_status: "pending_approval",
-          full_name: "",
         },
-      ]);
+      }
+    );
+
+    console.log("INVITE DATA", data);
+    console.log("INVITE ERROR", error);
 
     if (error) throw error;
 
@@ -180,7 +182,7 @@ const isMaster = true;
       notes: `Invited by ${user?.full_name || user?.email}`,
     });
 
-    toast.success("User added to pending approvals");
+    toast.success("Invitation sent successfully");
 
     queryClient.invalidateQueries({
       queryKey: ["all-users"],
@@ -189,11 +191,13 @@ const isMaster = true;
     setInviteEmail("");
     setInviteRole("recruiter");
     setInviteOpen(false);
-  } catch (err) {
-    toast.error(err.message || "Failed to create invitation");
-  }
 
-  setInviting(false);
+  } catch (err) {
+    console.error("FULL ERROR", err);
+    toast.error(err.message || "Failed to send invite");
+  } finally {
+    setInviting(false);
+  }
 };
 
   if (!can.manageUsers(user)) {
@@ -235,7 +239,13 @@ const isMaster = true;
         <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300">
           <Clock className="h-5 w-5 shrink-0" />
           <span className="font-semibold">{pendingCount} user{pendingCount > 1 ? "s" : ""} awaiting approval</span>
-          <button onClick={() => setStatusFilter("pending_approval")} className="ml-auto text-xs underline shrink-0">View</button>
+          <Button
+  onClick={() => {
+    setStatusFilter("Pending Approval");
+  }}
+>
+  View
+</Button>
         </div>
       )}
 

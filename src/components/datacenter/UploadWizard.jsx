@@ -263,7 +263,7 @@ const tableName = tableMap[entity];
       }
 
       // Save DataFile record
-      await supabase
+      const { data, error } = await supabase
   .from("data_files")
   .insert([
     {
@@ -275,13 +275,17 @@ const tableName = tableMap[entity];
       entity_type: entity,
       row_count: allRows.length,
       column_count: headers.length,
-      columns: JSON.stringify(headers),
-      rows_data: JSON.stringify(allRows.slice(0, 10000)),
+      columns: headers,
+      rows_data: allRows.slice(0, 10000),
       sync_status: failed === 0 ? "synced" : "error",
       imported_count: success,
       size_bytes: file.size || 0,
     },
-  ]);
+  ])
+  .select();
+
+console.log("DATA FILE INSERT", data);
+console.log("DATA FILE ERROR", error);
 
       queryClient.invalidateQueries();
       setImportResult({ success, failed, total: allRows.length });

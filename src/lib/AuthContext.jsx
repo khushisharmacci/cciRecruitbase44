@@ -13,26 +13,38 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
-    const { data: recruiter, error } = await supabase
+    let { data: recruiter, error } = await supabase
   .from("recruiters")
   .select("*")
   .eq("auth_user_id", authUser.id)
   .maybeSingle();
 
+if (!recruiter) {
+  const { data } = await supabase
+    .from("recruiters")
+    .select("*")
+    .eq("email", authUser.email)
+    .maybeSingle();
+
+  recruiter = data || null;
+}
+
 console.log("LOOKUP ID", authUser.id);
-console.log("RECRUITER PROFILE", recruiter);
-console.log("RECRUITER ERROR", error);
 
     if (error) {
       console.error("Recruiter lookup error:", error);
     }
+console.log("AUTH USER", authUser);
+console.log("AUTH USER ID", authUser?.id);
+console.log("AUTH USER EMAIL", authUser?.email);
 
+console.log("RECRUITER PROFILE", recruiter);
+console.log("RECRUITER ERROR", error);
     const mergedUser = {
       ...authUser,
       ...(recruiter || {}),
     };
-
-    console.log("RECRUITER PROFILE", recruiter);
+console.log("RECRUITER", recruiter);
 console.log("MERGED USER", mergedUser);
     setUser(mergedUser);
   };

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 const PAGE_SIZE = 50;
 
 export default function SpreadsheetViewer({ file, onClose }) {
+  console.log("VIEWER FILE", file);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [sortCol, setSortCol] = useState(null);

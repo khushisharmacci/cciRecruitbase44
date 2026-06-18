@@ -50,13 +50,18 @@ const { data: events = [], isLoading } = useQuery({
 
   const createMutation = useMutation({
   mutationFn: async (data) => {
+    console.log("INSERTING EVENT", data);
+
     const { error } = await supabase
       .from("events")
       .insert([data]);
 
+    console.log("INSERT ERROR", error);
+
     if (error) throw error;
   },
   onSuccess: () => {
+    console.log("EVENT CREATED");
     qc.invalidateQueries({ queryKey: ["events"] });
     setFormOpen(false);
   },

@@ -11,7 +11,109 @@ import { toast } from "@/components/ui/use-toast";
 
 // --- Step components ---
 
+function StepAccount({
+  email,
+  setEmail,
+  password,
+  setPassword,
+  confirmPassword,
+  setConfirmPassword,
+  onSubmit,
+  loading,
+  error,
+  onGoogle,
+}) {
+  return (
+    <div className="space-y-4">
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full h-12 text-sm font-medium"
+        onClick={onGoogle}
+      >
+        <GoogleIcon className="w-5 h-5 mr-2" />
+        Continue with Google
+      </Button>
 
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-border" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-card px-3 text-muted-foreground">or</span>
+        </div>
+      </div>
+
+      {error && (
+        <div className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label>Email</Label>
+          <div className="relative">
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="pl-10 h-12"
+              required
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Password</Label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="pl-10 h-12"
+              required
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Confirm Password</Label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="pl-10 h-12"
+              required
+            />
+          </div>
+        </div>
+
+        <Button
+          type="submit"
+          className="w-full h-12 font-medium"
+          disabled={loading}
+        >
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Creating account...
+            </>
+          ) : (
+            <>
+              Continue
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </>
+          )}
+        </Button>
+      </form>
+    </div>
+  );
+}
 
 function FileUploadField({ label, required, onChange, value }) {
   return (
@@ -69,11 +171,11 @@ function StepCompany({ company, setCompany, files, setFiles, onNext, onBack, loa
 
 // --- Main Register ---
 export default function Register() {
-  const [step, setStep] = useState("account"); // account | otp | company_type | company
+  // account | confirm_email | company_type | company
+  const [step, setStep] = useState("account");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [isCeo, setIsCeo] = useState(null);
   const [otpCode, setOtpCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -100,10 +202,26 @@ const handleGoogle = async () => {
     if (password !== confirmPassword) {setError("Passwords do not match");return;}
     setLoading(true);
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
   email,
   password,
+  options: {
+    emailRedirectTo: `${window.location.origin}/login`,
+  },
 });
+
+if (error) throw error;
+
+console.log("Signup result", data);
+
+setStep("confirm_email");
+
+console.log("Signup result", data);
+
+setStep("confirm_email");
+console.log("SIGNUP DATA", data);
+console.log("SIGNUP USER", data?.user);
+console.log("SIGNUP SESSION", data?.session);
 
 if (error) throw error;
 
@@ -142,6 +260,15 @@ setStep("otp");
 };
 
   const uploadFile = async () => {
+      if (step === "confirm_email") {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 bg-background">
+        <div className="w-full max-w-md bg-card rounded-2xl border p-8">
+          <ConfirmEmailStep email={email} />
+        </div>
+      </div>
+    );
+  }
   return null;
 };
 

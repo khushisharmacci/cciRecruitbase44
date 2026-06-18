@@ -37,7 +37,7 @@ const defaultForm = {
   title: "", description: "", event_type: "Meeting", priority: "Medium",
   start_datetime: "", end_datetime: "", all_day: false, location: "",
   assigned_to: "", related_candidate: "", related_client: "",
-  reminders: [], recurrence: "None", notes: ""
+  reminders: [], recurrence: "None"
 };
 
 export default function EventForm({ open, onOpenChange, event, onSave, isLoading }) {
@@ -67,12 +67,17 @@ export default function EventForm({ open, onOpenChange, event, onSave, isLoading
   };
 
   const handleSubmit = (e) => {
-    e.preventDefault();
-    onSave({
-      ...form,
-      reminders: JSON.stringify(form.reminders)
-    });
+  e.preventDefault();
+
+  const payload = {
+    ...form,
+    end_datetime: form.end_datetime || null,
   };
+
+  console.log("PAYLOAD", payload);
+
+  onSave(payload);
+};
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

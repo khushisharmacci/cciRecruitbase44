@@ -116,6 +116,7 @@ const handleCreateFolder = async (name) => {
   return (
     <>
       {/* Spreadsheet Viewer overlay */}
+      console.log("OPEN FILE", openFile);
       {openFile &&
       <SpreadsheetViewer file={openFile} onClose={() => setOpenFile(null)} />
       }

@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, UsersRound, Pencil, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Teams() {
   const queryClient = useQueryClient();
@@ -24,7 +25,7 @@ export default function Teams() {
       .from("teams")
       .select("*")
       .order("created_at", { ascending: false });
-
+console.log("FETCHING TEAMS");
     if (error) throw error;
 
     return data || [];
@@ -33,16 +34,44 @@ export default function Teams() {
 
   const createMutation = useMutation({
   mutationFn: async (data) => {
-    const { error } = await supabase
+    const { data: insertedTeam, error } = await supabase
       .from("teams")
-      .insert([data]);
+      .insert([data])
+      .select();
 
     if (error) throw error;
+
+    return insertedTeam[0];
   },
-  onSuccess: () => {
-    queryClient.invalidateQueries({ queryKey: ["teams"] });
+
+  onSuccess: (newTeam) => {
+    queryClient.setQueryData(["teams"], (old = []) => [
+      newTeam,
+      ...old,
+    ]);
+
     setDialogOpen(false);
-  }
+
+    setForm({
+      name: "",
+      lead_name: "",
+      department: "",
+      members: "",
+      description: "",
+    });
+
+    toast.success("Team created successfully");
+  },
+
+  onError: (err) => {
+  console.log("FULL ERROR", JSON.stringify(err, null, 2));
+  console.log("MESSAGE", err.message);
+  console.log("DETAILS", err.details);
+  console.log("HINT", err.hint);
+  console.log("CODE", err.code);
+
+  toast.error(err.message || "Failed to create team");
+},
 });
   const updateMutation = useMutation({
   mutationFn: async ({ id, data }) => {

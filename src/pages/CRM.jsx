@@ -12,6 +12,7 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useTenant } from "@/lib/tenant";
+import { toast } from "sonner";
 
 const stages = ["New Lead", "Contacted", "Qualified", "Proposal Sent", "Negotiation", "Won", "Lost"];
 const stageColors = {
@@ -35,6 +36,8 @@ export default function CRM() {
   const { data: leads = [], isLoading } = useQuery({
   queryKey: ["leads"],
   queryFn: async () => {
+    console.log("FETCHING LEADS");
+
     const { data, error } = await supabase
       .from("leads")
       .select("*")
@@ -46,16 +49,53 @@ export default function CRM() {
   },
 });
 
-  const createMutation = useMutation({
+const createMutation = useMutation({
   mutationFn: async (data) => {
-    const { error } = await supabase
+    const { data: insertedLead, error } = await supabase
       .from("leads")
-      .insert([data]);
+      .insert([data])
+      .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error(error);
+      throw error;
+    }
+
+    return insertedLead[0];
   },
-    onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["leads"] });setDialogOpen(false);}
-  });
+
+  onError: (err) => {
+    console.error("MUTATION ERROR", err);
+    toast.error(err.message);
+  },
+
+  onSuccess: async () => {
+    await queryClient.invalidateQueries({
+      queryKey: ["leads"],
+    });
+
+    await queryClient.refetchQueries({
+      queryKey: ["leads"],
+    });
+
+    setDialogOpen(false);
+
+    setForm({
+      company_name: "",
+      contact_person: "",
+      email: "",
+      phone: "",
+      stage: "New Lead",
+      source: "",
+      notes: "",
+      value: "",
+      next_followup: "",
+    });
+
+    toast.success("Lead created successfully");
+  },
+}); 
+
   const updateMutation = useMutation({
   mutationFn: async ({ id, data }) => {
     const { error } = await supabase
@@ -63,9 +103,34 @@ export default function CRM() {
       .update(data)
       .eq("id", id);
 
-    if (error) throw error;
+    if (error) {
+  console.error("LEADS INSERT ERROR:", error);
+  throw error;
+}
   },
-    onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["leads"] });setDialogOpen(false);setEditItem(null);}
+    onSuccess: async () => {
+  await queryClient.invalidateQueries({
+    queryKey: ["leads"],
+  });
+
+  await queryClient.refetchQueries({
+    queryKey: ["leads"],
+  });
+
+  setDialogOpen(false);
+
+  setForm({
+    company_name: "",
+    contact_person: "",
+    email: "",
+    phone: "",
+    stage: "New Lead",
+    source: "",
+    notes: "",
+    value: "",
+    next_followup: "",
+  });
+},
   });
   const deleteMutation = useMutation({
   mutationFn: async (id) => {
@@ -74,20 +139,60 @@ export default function CRM() {
       .delete()
       .eq("id", id);
 
-    if (error) throw error;
+    if (error) {
+  console.error("LEADS INSERT ERROR:", error);
+  throw error;
+}
   },
-    onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["leads"] });setDeleteId(null);}
+    onSuccess: async () => {
+  await queryClient.invalidateQueries({
+    queryKey: ["leads"],
+  });
+
+  await queryClient.refetchQueries({
+    queryKey: ["leads"],
+  });
+
+  setDialogOpen(false);
+
+  setForm({
+    company_name: "",
+    contact_person: "",
+    email: "",
+    phone: "",
+    stage: "New Lead",
+    source: "",
+    notes: "",
+    value: "",
+    next_followup: "",
+  });
+},
   });
 
   const openCreate = () => {setEditItem(null);setForm({ company_name: "", contact_person: "", email: "", phone: "", stage: "New Lead", source: "", notes: "", value: "", next_followup: "" });setDialogOpen(true);};
   const openEdit = (l) => {setEditItem(l);setForm({ company_name: l.company_name || "", contact_person: l.contact_person || "", email: l.email || "", phone: l.phone || "", stage: l.stage || "New Lead", source: l.source || "", notes: l.notes || "", value: l.value || "", next_followup: l.next_followup ? l.next_followup.split("T")[0] : "" });setDialogOpen(true);};
 
   const handleSave = (e) => {
-    e.preventDefault();
-    const payload = { ...form, value: form.value ? Number(form.value) : undefined, next_followup: form.next_followup || undefined };
-    if (editItem) updateMutation.mutate({ id: editItem.id, data: payload });else
-    createMutation.mutate(payload);
+  e.preventDefault();
+
+  const payload = {
+    company_name: form.company_name,
+    contact_person: form.contact_person,
+    email: form.email,
+    phone: form.phone,
+    stage: form.stage,
+    notes: form.notes,
   };
+
+  if (editItem) {
+    updateMutation.mutate({
+      id: editItem.id,
+      data: payload,
+    });
+  } else {
+    createMutation.mutate(payload);
+  }
+};
 
   const groupedByStage = stages.map((s) => ({ stage: s, leads: leads.filter((l) => l.stage === s) }));
 
