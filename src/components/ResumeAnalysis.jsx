@@ -80,11 +80,10 @@ setMatchReport(analysis);
 };
 
 const scoreColor = (score) => {
-  const scoreColor = (score) => {
-    if (score >= 75) return "text-emerald-600";
-    if (score >= 50) return "text-amber-600";
-    return "text-red-600";
-  };
+  if (score >= 75) return "text-emerald-600";
+  if (score >= 50) return "text-amber-600";
+  return "text-red-600";
+};
 
   const ScoreBar = ({ label, value }) => (
     <div>

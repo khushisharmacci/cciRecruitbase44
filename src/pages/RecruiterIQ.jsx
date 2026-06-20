@@ -12,28 +12,8 @@ async function callAI(prompt) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-  prompt: `
-Analyze this resume against the job description.
-
-Resume:
-${candidate?.resume_text || candidate}
-
-Job Description:
-${jd}
-
-Return ONLY valid JSON:
-
-{
-  "overall_match": 0,
-  "skill_match": 0,
-  "experience_match": 0,
-  "summary": "",
-  "matching_skills": [],
-  "missing_skills": [],
-  "interview_focus_areas": []
-}
-`
-}),
+      prompt,
+    }),
   });
 
   const data = await response.json();
@@ -95,7 +75,18 @@ Job Title: ${form.title}
 
     console.log("AI RESULT:", res);
 
-    setResult(res);
+    let analysis = res;
+
+if (typeof analysis === "string") {
+  analysis = analysis
+    .replace(/```json/g, "")
+    .replace(/```/g, "")
+    .trim();
+
+  analysis = JSON.parse(analysis);
+}
+
+setResult(analysis);
 
   } catch (err) {
     console.error("GENERATE ERROR:", err);
@@ -166,8 +157,18 @@ Return ONLY valid JSON in this format:
 }
 `);
 
-setResult(res);
-    setResult(res);
+let analysis = res;
+
+if (typeof analysis === "string") {
+  analysis = analysis
+    .replace(/```json/g, "")
+    .replace(/```/g, "")
+    .trim();
+
+  analysis = JSON.parse(analysis);
+}
+
+setResult(analysis);
     setLoading(false);
   };
 
@@ -279,8 +280,18 @@ Return ONLY valid JSON:
 }
 `);
 
-setResult(res);
-    setResult(res);
+let questions = res;
+
+if (typeof questions === "string") {
+  questions = questions
+    .replace(/```json/g, "")
+    .replace(/```/g, "")
+    .trim();
+
+  questions = JSON.parse(questions);
+}
+
+setResult(questions);
     setLoading(false);
   };
 
@@ -356,8 +367,18 @@ Return ONLY valid JSON:
 }
 `);
 
-setResult(res);
-    setResult(res);
+let insights = res;
+
+if (typeof insights === "string") {
+  insights = insights
+    .replace(/```json/g, "")
+    .replace(/```/g, "")
+    .trim();
+
+  insights = JSON.parse(insights);
+}
+
+setResult(insights);
     setLoading(false);
   };
 
