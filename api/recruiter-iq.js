@@ -1,8 +1,6 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -10,35 +8,26 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { prompt, jsonSchema } = req.body;
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
-      temperature: 0.7,
+    const { prompt } = req.body;
+console.log("GEMINI KEY EXISTS:", !!process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.5-flash"
     });
 
-    const text = response.choices[0].message.content;
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
 
     return res.status(200).json({
       result: text,
     });
   } catch (error) {
-  console.error(error);
-
-  if (error.code === "insufficient_quota") {
-    return res.status(429).json({
-      error: "OpenAI API quota exceeded. Please check billing."
-    });
-  }
+  console.error("GEMINI ERROR:", error);
+  console.log("USING GEMINI API");
+console.log("GEMINI KEY EXISTS:", !!process.env.GEMINI_API_KEY);
 
   return res.status(500).json({
     error: error.message,
+    details: String(error),
   });
-}
+  }
 }

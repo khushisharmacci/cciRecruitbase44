@@ -14,6 +14,10 @@ async function callAI(prompt) {
   });
 
   const data = await response.json();
+
+  console.log("STATUS:", response.status);
+  console.log("DATA:", data);
+
   return data.result;
 }
 import { Brain, FileText, Search, Users, Loader2 } from "lucide-react";
@@ -55,32 +59,26 @@ function JDGenerator() {
   const [loading, setLoading] = useState(false);
 
   const generate = async () => {
+  console.log("Generate clicked");
+
+  try {
     setLoading(true);
+
     const res = await callAI(`
-Generate a comprehensive, professional job description for the following role:
-
+Generate a comprehensive, professional job description for:
 Job Title: ${form.title}
-Experience: ${form.experience} years
-Key Skills: ${form.skills}
-Industry: ${form.industry}
-Location: ${form.location}
-
-Include:
-1. Role Summary
-2. Key Responsibilities
-3. Required Skills
-4. Preferred Skills
-5. Qualifications
-6. Salary Range
-7. SEO Keywords
-
-Format in markdown.
 `);
 
-setResult(res);
-    setResult(typeof res === "string" ? res : res?.response || res?.text || "");
+    console.log("AI RESULT:", res);
+
+    setResult(res);
+
+  } catch (err) {
+    console.error("GENERATE ERROR:", err);
+  } finally {
     setLoading(false);
-  };
+  }
+};
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
