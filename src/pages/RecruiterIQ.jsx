@@ -11,7 +11,29 @@ async function callAI(prompt) {
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify({
+  prompt: `
+Analyze this resume against the job description.
+
+Resume:
+${candidate?.resume_text || candidate}
+
+Job Description:
+${jd}
+
+Return ONLY valid JSON:
+
+{
+  "overall_match": 0,
+  "skill_match": 0,
+  "experience_match": 0,
+  "summary": "",
+  "matching_skills": [],
+  "missing_skills": [],
+  "interview_focus_areas": []
+}
+`
+}),
   });
 
   const data = await response.json();
