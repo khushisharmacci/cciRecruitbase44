@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+
 async function callAI(prompt) {
   const response = await fetch("/api/recruiter-iq", {
     method: "POST",
@@ -16,10 +17,11 @@ async function callAI(prompt) {
   const data = await response.json();
 
   console.log("STATUS:", response.status);
-  console.log("DATA:", data);
+  console.log("RAW AI RESPONSE:", data.result);
 
   return data.result;
 }
+
 import { Brain, FileText, Search, Users, Loader2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
@@ -142,7 +144,7 @@ Return ONLY valid JSON in this format:
 }
 `);
 
-setResult(JSON.parse(res));
+setResult(res);
     setResult(res);
     setLoading(false);
   };
@@ -255,7 +257,7 @@ Return ONLY valid JSON:
 }
 `);
 
-setResult(JSON.parse(res));
+setResult(res);
     setResult(res);
     setLoading(false);
   };
@@ -332,7 +334,7 @@ Return ONLY valid JSON:
 }
 `);
 
-setResult(JSON.parse(res));
+setResult(res);
     setResult(res);
     setLoading(false);
   };

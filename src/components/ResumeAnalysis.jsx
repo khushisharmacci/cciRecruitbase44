@@ -59,6 +59,7 @@ export default function ResumeAnalysis({ candidate, onCandidateUpdate }) {
     });
 
     const result = await response.json();
+    console.log("ANALYZE RESPONSE:", result);
     setMatchReport(result);
   } catch (err) {
     console.error(err);

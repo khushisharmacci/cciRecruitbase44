@@ -8,7 +8,23 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { prompt } = req.body;
+    const { prompt } = `
+Analyze the resume against the job description.
+
+Return ONLY valid JSON.
+Do not use markdown.
+Do not wrap in \`\`\`json.
+
+{
+  "overall_match": 85,
+  "skill_match": 90,
+  "experience_match": 80,
+  "summary": "",
+  "matching_skills": [],
+  "missing_skills": [],
+  "interview_focus_areas": []
+}
+`;
 console.log("GEMINI KEY EXISTS:", !!process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash"
@@ -17,10 +33,13 @@ console.log("GEMINI KEY EXISTS:", !!process.env.GEMINI_API_KEY);
     const result = await model.generateContent(prompt);
     const text = result.response.text();
 
-    return res.status(200).json({
-      result: text,
-    });
-  } catch (error) {
+const cleanText = text
+  .replace(/```json/g, "")
+  .replace(/```/g, "")
+  .trim();
+
+return res.status(200).json(JSON.parse(cleanText));}
+ catch (error) {
   console.error("GEMINI ERROR:", error);
   console.log("USING GEMINI API");
 console.log("GEMINI KEY EXISTS:", !!process.env.GEMINI_API_KEY);
