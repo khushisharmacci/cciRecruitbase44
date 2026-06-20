@@ -9,8 +9,6 @@ export default function ResumeAnalysis({ candidate, onCandidateUpdate }) {
   const [jd, setJd] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
   const [matchReport, setMatchReport] = useState(null);
-}
-
   const handleResumeUpload = async (e) => {
   const file = e.target.files[0];
   if (!file) return;
@@ -47,7 +45,7 @@ export default function ResumeAnalysis({ candidate, onCandidateUpdate }) {
     setAnalyzing(true);
     setMatchReport(null);
 
-    const response = await fetch("/api/recruiter-iq/analyze-match", {
+    const response = await fetch("/api/recruiter-iq", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -57,7 +55,7 @@ export default function ResumeAnalysis({ candidate, onCandidateUpdate }) {
         jd,
       }),
     });
-
+console.log("STATUS:", response.status);
     const result = await response.json();
 
 let analysis = result.result;
@@ -68,7 +66,13 @@ if (typeof analysis === "string") {
     .replace(/```/g, "")
     .trim();
 
+  try {
   analysis = JSON.parse(analysis);
+} catch (e) {
+  console.error("JSON Parse Error:", analysis);
+  return;
+  console.log("RESULT:", result);
+}
 }
 
 setMatchReport(analysis);
@@ -109,7 +113,7 @@ const scoreColor = (score) => {
         <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
           <FileText className="h-5 w-5 text-primary" /> Resume
         </h3>
-        {candidate.resume_url ? (
+        {candidate?.resume_url ? (
           <div className="flex items-center gap-4 p-3 rounded-lg bg-muted/50">
             <FileText className="h-8 w-8 text-primary shrink-0" />
             <div className="flex-1 min-w-0">

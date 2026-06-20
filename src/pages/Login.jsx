@@ -31,8 +31,6 @@ function LogoHeader() {
   <img
   src="/ccilogo.jpeg"
   alt="CCI Logo"
-
-        alt="CCI Logo"
         className="h-16 w-16 object-contain rounded-2xl mb-3 shadow-md" />
       
       <h1 className="text-2xl font-bold text-foreground">cciRecruit</h1>
@@ -169,8 +167,6 @@ export default function Login() {
             <img
   src="/ccilogo.jpeg"
   alt="CCI Logo"
-
-              alt="CCI"
               className="h-10 w-10 rounded-xl object-contain cursor-pointer"
               onClick={handleLogoClick} />
             
