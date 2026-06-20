@@ -29,10 +29,16 @@ export default async function handler(req, res) {
       result: text,
     });
   } catch (error) {
-    console.error(error);
+  console.error(error);
 
-    return res.status(500).json({
-      error: error.message,
+  if (error.code === "insufficient_quota") {
+    return res.status(429).json({
+      error: "OpenAI API quota exceeded. Please check billing."
     });
   }
+
+  return res.status(500).json({
+    error: error.message,
+  });
+}
 }
