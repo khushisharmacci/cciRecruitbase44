@@ -13,9 +13,10 @@ import { can, ROLE_LABELS } from "@/lib/roles";
 export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobileOpen, user }) {
   const location = useLocation();
 
-  console.log("SIDEBAR USER", user);
-  console.log("SIDEBAR ROLE", user?.role);
-  const role = user?.role || "recruiter";
+  console.log("SIDEBAR USER:", user);
+console.log("SIDEBAR ROLE:", user?.role);
+
+const role = user?.role || "recruiter";
   
   const roleLabel = ROLE_LABELS[role] || "Recruiter";
 
