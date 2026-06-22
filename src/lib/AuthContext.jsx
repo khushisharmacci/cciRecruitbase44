@@ -51,14 +51,14 @@ console.log("MERGED USER", mergedUser);
 
   useEffect(() => {
     const initializeAuth = async () => {
-      const {
-        data: { user: authUser },
-      } = await supabase.auth.getUser();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-      await loadProfile(authUser);
+  await loadProfile(session?.user);
 
-      setIsLoadingAuth(false);
-    };
+  setIsLoadingAuth(false);
+};
 
     initializeAuth();
 
