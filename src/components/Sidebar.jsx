@@ -23,7 +23,7 @@ const role = user?.role || "recruiter";
   const buildNav = () => {
     const items = [];
 
-    items.push({ path: "/", label: "Dashboard", icon: LayoutDashboard });
+    items.push({ path: "/dashboard", label: "Dashboard", icon: LayoutDashboard });
     items.push({ path: "/events", label: "Event Center", icon: CalendarCheck });
     items.push({ path: "/chat", label: "Team Chat", icon: MessageSquare });
 

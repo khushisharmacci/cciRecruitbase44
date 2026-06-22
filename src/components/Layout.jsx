@@ -11,6 +11,7 @@ export default function Layout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user } = useAuth();
   console.log("LAYOUT USER", user);
+  console.log("CURRENT PATH", location.pathname);
   const navigate = useNavigate();
 
   useEffect(() => {
