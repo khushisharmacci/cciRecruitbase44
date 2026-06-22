@@ -3,14 +3,18 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({
-      error: "Method not allowed",
-    });
-  }
-
   try {
+    console.log("BODY:", req.body);
+
     const { prompt } = req.body;
+
+    console.log("PROMPT:", prompt);
+
+    if (!prompt) {
+      return res.status(400).json({
+        error: "No prompt received",
+      });
+    }
 
     const model = genAI.getGenerativeModel({
       model: "gemini-2.5-flash",
@@ -23,7 +27,7 @@ export default async function handler(req, res) {
       result: text,
     });
   } catch (error) {
-    console.error("GEMINI ERROR:", error);
+    console.error(error);
 
     return res.status(500).json({
       error: error.message,

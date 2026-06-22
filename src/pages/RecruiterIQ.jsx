@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 async function callAI(prompt) {
+  console.log("PROMPT RECEIVED:", prompt);
+
   const response = await fetch("/api/recruiter-iq", {
     method: "POST",
     headers: {
@@ -19,7 +21,7 @@ async function callAI(prompt) {
   const data = await response.json();
 
   console.log("STATUS:", response.status);
-  console.log("RAW AI RESPONSE:", data.result);
+  console.log("FULL RESPONSE:", data);
 
   return data.result;
 }
@@ -43,15 +45,9 @@ export default function RecruiterIQ() {
       <Tabs defaultValue="jd" className="space-y-6">
         <TabsList className="bg-muted">
           <TabsTrigger value="jd" className="gap-2 text-[hsl(var(--chart-3))]"><FileText className="h-4 w-4" /> JD Generator</TabsTrigger>
-          <TabsTrigger value="screen" className="gap-2 text-[hsl(var(--accent))]"><Search className="h-4 w-4" /> Resume Screen</TabsTrigger>
-          <TabsTrigger value="interview" className="gap-2 text-[hsl(var(--accent))]"><Users className="h-4 w-4" /> Interview Qs</TabsTrigger>
-          <TabsTrigger value="insights" className="gap-2 text-[hsl(var(--accent))]"><Brain className="h-4 w-4" /> Insights</TabsTrigger>
         </TabsList>
 
         <TabsContent value="jd"><JDGenerator /></TabsContent>
-        <TabsContent value="screen"><ResumeScreener /></TabsContent>
-        <TabsContent value="interview"><InterviewQuestions /></TabsContent>
-        <TabsContent value="insights"><CandidateInsights /></TabsContent>
       </Tabs>
     </div>);
 
@@ -75,18 +71,7 @@ Job Title: ${form.title}
 
     console.log("AI RESULT:", res);
 
-    let analysis = res;
-
-if (typeof analysis === "string") {
-  analysis = analysis
-    .replace(/```json/g, "")
-    .replace(/```/g, "")
-    .trim();
-
-  analysis = JSON.parse(analysis);
-}
-
-setResult(analysis);
+setResult(res);
 
   } catch (err) {
     console.error("GENERATE ERROR:", err);
