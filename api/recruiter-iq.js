@@ -20,7 +20,18 @@ export default async function handler(req, res) {
       model: "gemini-2.5-flash",
     });
 
-    const result = await model.generateContent(prompt);
+    const result = await model.generateContent({
+  contents: [
+    {
+      role: "user",
+      parts: [
+        {
+          text: prompt,
+        },
+      ],
+    },
+  ],
+});
     const text = result.response.text();
 
     return res.status(200).json({

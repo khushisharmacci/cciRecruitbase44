@@ -18,12 +18,18 @@ async function callAI(prompt) {
     }),
   });
 
-  const data = await response.json();
+  const text = await response.text();
 
-  console.log("STATUS:", response.status);
-  console.log("FULL RESPONSE:", data);
+console.log("STATUS:", response.status);
+console.log("RAW RESPONSE:", text);
 
-  return data.result;
+if (!text) {
+  throw new Error("API returned empty response");
+}
+
+const data = JSON.parse(text);
+
+return data.result;
 }
 
 import { Brain, FileText, Search, Users, Loader2 } from "lucide-react";
