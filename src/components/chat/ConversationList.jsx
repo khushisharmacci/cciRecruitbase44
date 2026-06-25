@@ -24,7 +24,9 @@ export default function ConversationList({ conversations, selectedId, onSelect, 
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input className="pl-9 h-8 text-sm" placeholder="Search chats..." value={search} onChange={e => setSearch(e.target.value)} />
+          <Input
+className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-400 focus:border-blue-500 focus:ring-blue-500"
+/>
         </div>
       </div>
 

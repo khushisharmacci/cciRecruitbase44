@@ -1,18 +1,24 @@
-import { Outlet, useNavigate } from "react-router-dom";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { Menu } from "lucide-react";
 import Sidebar from "./Sidebar";
 import GlobalSearch from "./GlobalSearch";
 import ChatHeaderIcon from "./ChatHeaderIcon";
+import { useEventReminders } from "@/hooks/useEventReminders";
 
 export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+
   console.log("LAYOUT USER", user);
   console.log("CURRENT PATH", location.pathname);
-  const navigate = useNavigate();
+
+  useEventReminders();
 
   useEffect(() => {
     if (user && user.account_status === "pending_approval") {
@@ -48,4 +54,5 @@ export default function Layout() {
         </main>
       </div>
     </div>
-  );}
+  );
+}

@@ -53,7 +53,10 @@ export default function NewConversationDialog({ open, onOpenChange, users, curre
           <TabsContent value="direct" className="space-y-3 mt-3 text-[hsl(var(--muted))]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input className="pl-9" placeholder="Search teammates..." value={search} onChange={(e) => setSearch(e.target.value)} />
+              <Input
+placeholder="Search teammates..."
+className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-400"
+/>
             </div>
             <div className="max-h-52 overflow-y-auto space-y-1">
               {filtered.map((u) =>
@@ -85,7 +88,10 @@ export default function NewConversationDialog({ open, onOpenChange, users, curre
               <Label className="mb-2 block">Add Members *</Label>
               <div className="relative mb-2">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input className="pl-9" placeholder="Search teammates..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                <Input
+placeholder="Search teammates..."
+className="bg-slate-800 border-slate-700 text-white placeholder:text-slate-400"
+/>
               </div>
               <div className="max-h-40 overflow-y-auto space-y-1">
                 {filtered.map((u) =>

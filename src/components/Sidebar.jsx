@@ -2,16 +2,33 @@ import { supabase } from "@/lib/supabase";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/lib/AuthContext";
 import {
-  LayoutDashboard, Users, Brain, BarChart3, Database,
+  LayoutDashboard, Users, FileText, BarChart3, Database,
   Building2, Handshake, UsersRound, Target, IndianRupee,
   HelpCircle, Bell, LogOut, ChevronLeft, ChevronRight, X, Clock,
   Settings, Shield, UserCog, CalendarCheck, MessageSquare
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { can, ROLE_LABELS } from "@/lib/roles";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobileOpen, user }) {
   const location = useLocation();
+  const { data: notifications = [] } = useQuery({
+  queryKey: ["sidebar-notifications"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("read", false);
+
+    if (error) throw error;
+
+    return data || [];
+  },
+  refetchInterval: 30000,
+});
+
+const unreadCount = notifications.length;
 
   console.log("SIDEBAR USER:", user);
 console.log("SIDEBAR ROLE:", user?.role);
@@ -28,7 +45,12 @@ const role = user?.role || "recruiter";
     items.push({ path: "/chat", label: "Team Chat", icon: MessageSquare });
 
     if (can.viewRecruitment(user)) items.push({ path: "/candidates", label: "Candidates", icon: Users });
-    if (can.viewRecruiterIQ(user)) items.push({ path: "/recruiter-iq", label: "RecruiterIQ", icon: Brain });
+    if (can.viewRecruiterIQ(user))
+  items.push({
+    path: "/recruiter-iq",
+    label: "JD Details",
+    icon: FileText
+  });
     if (can.viewAnalytics(user)) items.push({ path: "/analytics", label: "Analytics", icon: BarChart3 });
     items.push({ path: "/data-center", label: "Data Center", icon: Database });
     if (can.viewCompanies(user)) items.push({ path: "/companies", label: "Companies", icon: Building2 });
@@ -51,7 +73,7 @@ const role = user?.role || "recruiter";
 
   const navItems = buildNav();
 
-  const NavLink = ({ item }) => {
+  const NavLink = ({ item, showBadge }) => {
     const active = location.pathname === item.path;
     return (
       <Link
@@ -64,7 +86,15 @@ const role = user?.role || "recruiter";
             : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
         )}
       >
-        <item.icon className="h-5 w-5 shrink-0" />
+        <div className="relative shrink-0">
+  <item.icon className="h-5 w-5" />
+
+  {showBadge && unreadCount > 0 && (
+    <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+      {unreadCount > 99 ? "99+" : unreadCount}
+    </span>
+  )}
+</div>
         {!collapsed && <span className="truncate">{item.label}</span>}
       </Link>
     );
@@ -73,15 +103,10 @@ const role = user?.role || "recruiter";
   // Role badge color
   const roleBadgeColor = {
     ceo: "bg-amber-500/20 text-amber-300",
-    super_admin: "bg-purple-500/20 text-purple-300",
-    company_admin: "bg-blue-500/20 text-blue-300",
     admin: "bg-blue-500/20 text-blue-300",
-    hr_manager: "bg-cyan-500/20 text-cyan-300",
     team_lead: "bg-cyan-500/20 text-cyan-300",
     recruiter: "bg-emerald-500/20 text-emerald-300",
-    team_member: "bg-slate-500/20 text-slate-300",
     employee: "bg-slate-500/20 text-slate-300",
-    viewer: "bg-gray-500/20 text-gray-300",
   }[role] || "bg-slate-500/20 text-slate-300";
 
   const sidebarContent = (
@@ -103,14 +128,20 @@ const role = user?.role || "recruiter";
       <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
         {navItems.map(item => <NavLink key={item.path} item={item} />)}
         <div className="my-4 border-t border-sidebar-border" />
-        {bottomItems.map(item => <NavLink key={item.path} item={item} />)}
+        {bottomItems.map(item => (
+  <NavLink
+    key={item.path}
+    item={item}
+    showBadge={item.path === "/notifications"}
+  />
+))}
       </nav>
 
       <div className="px-3 pb-4 space-y-2">
         <button
           onClick={async () => {
   await supabase.auth.signOut();
-  window.location.href = "/login";
+window.location.replace("/login");
 }}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground/60 hover:text-red-400 hover:bg-sidebar-accent transition-all w-full"
         >

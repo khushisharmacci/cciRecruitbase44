@@ -69,6 +69,10 @@ export const can = {
   viewTeams: () => true,
   viewTargets: () => true,
   viewAttendance: () => true,
+  manageAttendance: (u) =>
+  ["ceo", "admin", "team_lead"].includes(u?.role),
+   manageLeaveRequests: (u) =>
+    ["ceo", "admin", "team_lead"].includes(u?.role),
 
   // CEO only
   viewRevenue: (u) => u?.role === "ceo",

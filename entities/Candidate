@@ -25,7 +25,7 @@
     "current_company": {
       "type": "string"
     },
-    "current_job_role": {
+    "current_role": {
       "type": "string"
     },
     "expected_salary": {
@@ -51,6 +51,13 @@
     },
     "resume_url": {
       "type": "string"
+    },
+    "resume_filename": {
+      "type": "string"
+    },
+    "resume_upload_date": {
+      "type": "string",
+      "format": "date-time"
     },
     "notes": {
       "type": "string"

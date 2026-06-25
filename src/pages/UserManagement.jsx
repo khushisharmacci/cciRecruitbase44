@@ -15,17 +15,12 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
 const ROLE_COLORS = {
-  super_admin: "bg-purple-500/15 text-purple-300 border-purple-500/30",
-  company_admin: "bg-blue-500/15 text-blue-300 border-blue-500/30",
-  hr_manager: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
-  recruiter: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-  team_member: "bg-slate-500/15 text-slate-300 border-slate-500/30",
-  viewer: "bg-gray-500/15 text-gray-400 border-gray-500/30",
-  // legacy
   ceo: "bg-amber-500/15 text-amber-300 border-amber-500/30",
   admin: "bg-blue-500/15 text-blue-300 border-blue-500/30",
   team_lead: "bg-cyan-500/15 text-cyan-300 border-cyan-500/30",
+  recruiter: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
   employee: "bg-slate-500/15 text-slate-300 border-slate-500/30",
+  viewer: "bg-gray-500/15 text-gray-300 border-gray-500/30",
 };
 
 const STATUS_COLORS = {
@@ -211,7 +206,7 @@ const isMaster = true;
   }
 
   const myAssignableRoles = assignableRoles(user?.role);
-  const canAssign = ASSIGNABLE_ROLE_LIST.filter(r => myAssignableRoles.includes(r) || user?.role === "ceo" || user?.role === "super_admin");
+  const canAssign = ASSIGNABLE_ROLE_LIST.filter(r => myAssignableRoles.includes(r) || user?.role === "ceo" || user?.role === "ceo")
 
   const pendingCount = users.filter(u => u.account_status === "pending_approval").length;
 
@@ -376,7 +371,7 @@ const isMaster = true;
 
       {/* Edit User Dialog */}
       <Dialog open={!!editUser} onOpenChange={() => setEditUser(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-[#0F172A] border border-slate-700 text-white shadow-2xl">
           <DialogHeader>
             <DialogTitle>Edit User — {editUser?.full_name || editUser?.email}</DialogTitle>
           </DialogHeader>
@@ -433,7 +428,7 @@ const isMaster = true;
 
       {/* Invite Dialog */}
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-[#0F172A] border border-slate-700 text-white shadow-2xl">
           <DialogHeader>
             <DialogTitle>Invite New User</DialogTitle>
           </DialogHeader>

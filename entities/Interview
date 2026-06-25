@@ -20,17 +20,16 @@
     },
     "interview_date": {
       "type": "string",
-      "format": "date-time"
+      "format": "date"
+    },
+    "interview_time": {
+      "type": "string"
     },
     "interview_type": {
       "type": "string",
       "enum": [
-        "Phone Screen",
-        "Technical",
-        "HR",
-        "Panel",
-        "Final",
-        "Culture Fit"
+        "Online",
+        "Offline"
       ]
     },
     "status": {
@@ -38,13 +37,16 @@
       "enum": [
         "Scheduled",
         "Completed",
-        "Cancelled",
-        "No Show",
-        "Rescheduled"
+        "Selected",
+        "Rejected",
+        "On Hold"
       ],
       "default": "Scheduled"
     },
     "feedback": {
+      "type": "string"
+    },
+    "notes": {
       "type": "string"
     },
     "rating": {
@@ -56,7 +58,7 @@
   },
   "required": [
     "candidate_name",
-    "position_title",
+    "candidate_id",
     "interview_date",
     "status"
   ]

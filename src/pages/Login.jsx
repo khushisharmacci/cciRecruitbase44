@@ -9,20 +9,20 @@ import GoogleIcon from "@/components/GoogleIcon";
 
 const ROLE_REDIRECTS = {
   ceo: "/",
-  super_admin: "/",
-  admin: "/",
-  team_lead: "/",
-  recruiter: "/",
-  employee: "/attendance"
+admin: "/",
+team_lead: "/",
+recruiter: "/",
+employee: "/",
+viewer: "/",
 };
 
 const ROLE_WELCOME = {
   ceo: "Executive Dashboard",
-  super_admin: "Company Administration",
-  admin: "Operations Dashboard",
-  team_lead: "Team Management",
-  recruiter: "Recruiter Workspace",
-  employee: "Employee Portal"
+admin: "Operations Dashboard",
+team_lead: "Team Lead Dashboard",
+recruiter: "Recruitment Dashboard",
+employee: "Employee Dashboard",
+viewer: "Viewer Dashboard",
 };
 
 function LogoHeader() {

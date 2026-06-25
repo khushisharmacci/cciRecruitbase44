@@ -76,8 +76,11 @@ export default function ChatWindow({ conversation, messages, currentUser, allUse
         supabase
   .from("chat_messages")
   .update({
-    read_by: [...readBy, currentUser.id]
-  })
+  read_by: JSON.stringify([
+    ...readBy,
+    currentUser.id,
+  ]),
+})
   .eq("id", m.id);
       }
     });
@@ -85,6 +88,29 @@ export default function ChatWindow({ conversation, messages, currentUser, allUse
       setTimeout(() => qc.invalidateQueries({ queryKey: ["chat-messages"] }), 500);
     }
   }, [convMessages.length, conversation.id]);
+
+  useEffect(() => {
+  const channel = supabase
+    .channel("chat_messages")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "chat_messages",
+      },
+      () => {
+        qc.invalidateQueries({
+          queryKey: ["chat-messages"],
+        });
+      }
+    )
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, []);
 
   const sendMutation = useMutation({
     mutationFn: async (msg) => {
@@ -99,17 +125,70 @@ export default function ChatWindow({ conversation, messages, currentUser, allUse
   return data;
 },
     onSuccess: async (newMsg) => {
-      qc.invalidateQueries({ queryKey: ["chat-messages"] });
+  qc.invalidateQueries({ queryKey: ["chat-messages"] });
+
+  await supabase
+    .from("chat_conversations")
+    .update({
+      last_message:
+        newMsg.content ||
+        (newMsg.file_name
+          ? `📎 ${newMsg.file_name}`
+          : ""),
+      last_message_at: new Date().toISOString(),
+      last_message_by: currentUser.id,
+    })
+    .eq("id", conversation.id);
+
+  qc.invalidateQueries({
+    queryKey: ["chat-conversations"],
+  });
+
+  try {
+    const members = JSON.parse(
+      conversation.members || "[]"
+    );
+
+    const otherMembers = members.filter(
+      (id) => id !== currentUser.id
+    );
+
+    const preview =
+      newMsg.content ||
+      (newMsg.file_name
+        ? `📎 ${newMsg.file_name}`
+        : "Sent a file");
+
+    for (const memberId of otherMembers) {
       await supabase
-  .from("chat_conversations")
-  .update({
-    last_message: newMsg.content || (newMsg.file_name ? `📎 ${newMsg.file_name}` : ""),
-    last_message_at: new Date().toISOString(),
-    last_message_by: currentUser.id,
-  })
-  .eq("id", conversation.id);
-      qc.invalidateQueries({ queryKey: ["chat-conversations"] });
-    },
+        .from("notifications")
+        .insert([
+          {
+            company_id:
+              conversation.company_id,
+            user_id: memberId,
+            title: `New message from ${currentUser.full_name}`,
+            message: preview.slice(0, 100),
+            type: "Chat",
+            read: false,
+            sender_name:
+              currentUser.full_name,
+            created_at:
+              new Date().toISOString(),
+          },
+        ]);
+    }
+
+    qc.invalidateQueries({
+      queryKey: ["notifications"],
+    });
+  } catch (e) {
+    console.error(
+      "Notification error",
+      e
+    );
+  }
+},
   });
 
   const updateConvMutation = useMutation({
@@ -167,9 +246,27 @@ export default function ChatWindow({ conversation, messages, currentUser, allUse
     const file = e.target.files[0];
     if (!file) return;
     setUploading(true);
-    alert("File uploads have not been migrated to Supabase Storage yet.");
-setUploading(false);
-return;
+    const fileExt =
+  file.name.split(".").pop();
+
+const fileName =
+  `${Date.now()}-${file.name}`;
+
+const { error: uploadError } =
+  await supabase.storage
+    .from("chat-files")
+    .upload(fileName, file);
+
+if (uploadError)
+  throw uploadError;
+
+const {
+  data: { publicUrl },
+} = supabase.storage
+  .from("chat-files")
+  .getPublicUrl(fileName);
+
+const file_url = publicUrl;
     const isImg = file.type.startsWith("image/");
     sendMutation.mutate({
       company_id: conversation.company_id,
