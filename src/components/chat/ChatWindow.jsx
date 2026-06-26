@@ -124,8 +124,10 @@ export default function ChatWindow({ conversation, messages, currentUser, allUse
 
   return data;
 },
+
     onSuccess: async (newMsg) => {
   qc.invalidateQueries({ queryKey: ["chat-messages"] });
+
 
   await supabase
     .from("chat_conversations")
@@ -160,24 +162,25 @@ export default function ChatWindow({ conversation, messages, currentUser, allUse
         : "Sent a file");
 
     for (const memberId of otherMembers) {
-      await supabase
-        .from("notifications")
-        .insert([
-          {
-            company_id:
-              conversation.company_id,
-            user_id: memberId,
-            title: `New message from ${currentUser.full_name}`,
-            message: preview.slice(0, 100),
-            type: "Chat",
-            read: false,
-            sender_name:
-              currentUser.full_name,
-            created_at:
-              new Date().toISOString(),
-          },
-        ]);
-    }
+  const { error } = await supabase
+    .from("notifications")
+    .insert([
+      {
+        company_id: conversation.company_id,
+        user_id: memberId,
+        title: `New message from ${currentUser.full_name}`,
+        message: preview.slice(0, 100),
+        type: "Chat",
+        read: false,
+        sender_name: currentUser.full_name,
+        created_at: new Date().toISOString(),
+      },
+    ]);
+    if (error) console.error(error);
+
+  console.log("Notification insert:", memberId, error);
+  console.log("Notification insert error:", error);
+}
 
     qc.invalidateQueries({
       queryKey: ["notifications"],

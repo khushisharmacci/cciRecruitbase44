@@ -131,7 +131,6 @@ export default function LeaveRequests() {
         created_at: new Date().toISOString(),
       })
       .select();
-
     console.log("Notification result:", data);
     console.log("Notification error:", notificationError);
   },   // <-- THIS COMMA WAS MISSING

@@ -89,21 +89,31 @@ export function useEventReminders() {
                   read: false,
                   link: "/events",
                   event_id: notificationKey,
-                  recipient_id:
-                    event.owner_id ||
-                    event.assigned_to ||
-                    null,
+                  user_id: event.owner_id || event.assigned_to || null,
+                  company_id: event.company_id,
                   created_at: new Date().toISOString(),
                 },
               ]);
 
             if (error) {
-              console.error(
-                "Notification creation failed:",
-                error
-              );
-              continue;
-            }
+  console.error(
+    "Notification creation failed:",
+    error
+  );
+  continue;
+}
+
+await Promise.all([
+  qc.invalidateQueries({
+    queryKey: ["notifications"],
+  }),
+  qc.invalidateQueries({
+    queryKey: ["sidebar-notifications"],
+  }),
+  qc.invalidateQueries({
+    queryKey: ["event-notifications"],
+  }),
+]);
 
             await Promise.all([
               qc.invalidateQueries({

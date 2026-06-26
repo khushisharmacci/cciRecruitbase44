@@ -11,14 +11,21 @@ export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
+const navigate = useNavigate();
+const location = useLocation();
 
-  console.log("LAYOUT USER", user);
-  console.log("CURRENT PATH", location.pathname);
+const { user } = useAuth();
+
+console.log("LAYOUT USER", user);
+console.log("CURRENT PATH", location.pathname);
 
   useEventReminders();
+
+  useEffect(() => {
+  if (Notification.permission !== "granted") {
+    Notification.requestPermission();
+  }
+}, []);
 
   useEffect(() => {
     if (user && user.account_status === "pending_approval") {

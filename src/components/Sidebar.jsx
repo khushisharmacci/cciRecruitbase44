@@ -15,6 +15,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
   const location = useLocation();
   const { data: notifications = [] } = useQuery({
   queryKey: ["sidebar-notifications"],
+  refetchInterval: 5000,
   queryFn: async () => {
     const { data, error } = await supabase
       .from("notifications")

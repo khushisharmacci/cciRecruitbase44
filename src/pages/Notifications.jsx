@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { useAuth } from "@/lib/AuthContext";
 
 import {
   Bell,
@@ -17,6 +18,12 @@ import {
   Clock,
   Trash2,
 } from "lucide-react";
+
+const playNotificationSound = () => {
+  const audio = new Audio("/notification.mp3");
+  audio.play().catch(() => {});
+};
+
 
 const typeIcons = {
   Interview: Calendar,
@@ -39,15 +46,18 @@ const filterTabs = [
 
 
 export default function Notifications() {
+  const { user } = useAuth();
   const [activeFilter, setActiveFilter] = useState("all");
   const queryClient = useQueryClient();
+  const previousCount = useRef(0);
   const { data: notifications = [], isLoading } = useQuery({
   queryKey: ["notifications"],
   queryFn: async () => {
     const { data, error } = await supabase
       .from("notifications")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select("*");
+
+    console.log("Notifications:", data);
 
     if (error) throw error;
 
@@ -111,6 +121,45 @@ const deleteMutation = useMutation({
   if (activeFilter === "read") return n.read;
   return n.type === activeFilter;
 });
+
+useEffect(() => {
+  const channel = supabase
+    .channel("notifications")
+
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "notifications",
+      },
+      (payload) => {
+
+        queryClient.invalidateQueries({
+          queryKey: ["notifications"],
+        });
+
+        playNotificationSound();
+
+        if (Notification.permission === "granted") {
+
+          new Notification(payload.new.title, {
+            body: payload.new.message,
+            icon: "/logo.png",
+          });
+
+        }
+
+      }
+    )
+
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+
+}, []);
 
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-3xl mx-auto space-y-6">
