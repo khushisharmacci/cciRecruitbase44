@@ -26,7 +26,7 @@ export default function LeaveRequests() {
   const [form, setForm] = useState({
   leave_type: "Casual Leave",
   start_date: "",
-  end_date: "",
+  to_date: "",
   reason: ""
 });
 
@@ -62,23 +62,32 @@ export default function LeaveRequests() {
   const pendingRequests = leaveRequests.filter((r) => r.status === "Pending");
 
   const createMutation = useMutation({
-    mutationFn: async (data) => {
-  const { error } =
-    await supabase
+  mutationFn: async (data) => {
+    console.log("Sending:", data);
+
+    const { data: result, error } = await supabase
       .from("leave_requests")
-      .insert([
-        {
-          ...data,
-        },
-      ]);
+      .insert([data])
+      .select();
 
-  if (error) throw error;
-},
-    onSuccess: () => { qc.invalidateQueries({
-  queryKey: ["leave-requests", user?.company_id],
-}); setDialogOpen(false); },
-  });
+    console.log("Result:", result);
+    console.log("Error:", error);
 
+    if (error) throw error;
+  },
+
+  onSuccess: () => {
+    console.log("SUCCESS");
+    qc.invalidateQueries({
+      queryKey: ["leave-requests"],
+    });
+    setDialogOpen(false);
+  },
+
+  onError: (err) => {
+    console.error(err);
+  },
+});
   const updateMutation = useMutation({
     mutationFn: async ({
   id,
@@ -98,12 +107,14 @@ export default function LeaveRequests() {
   });
 
   const handleSubmit = () => {
+  console.log("Submitting", form);
+
   createMutation.mutate({
     user_id: user.id,
     employee_name: user.full_name,
     leave_type: form.leave_type,
     start_date: form.start_date,
-    end_date: form.end_date,
+    to_date: form.to_date,
     reason: form.reason,
     status: "Pending",
   });
@@ -113,7 +124,7 @@ export default function LeaveRequests() {
     setForm({
   leave_type: "Casual Leave",
   start_date: "",
-  end_date: "",
+  to_date: "",
   reason: ""
 });
     setDialogOpen(true);
@@ -149,8 +160,15 @@ export default function LeaveRequests() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground">{r.leave_type}</p>
                     <p className="text-xs text-muted-foreground">
-                      {r.start_date ? format(new Date(r.start_date), "MMM d") : "—"} → {r.end_date ? format(new Date(r.dnd_date), "MMM d, yyyy") : "—"}
-                    </p>
+  {r.leave_type} ·{" "}
+  {r.start_date
+    ? format(new Date(r.start_date), "MMM d")
+    : "—"}{" "}
+  →{" "}
+  {r.end_date
+    ? format(new Date(r.end_date), "MMM d, yyyy")
+    : "—"}
+</p>
                     {r.reason && <p className="text-xs text-muted-foreground/70 mt-0.5">{r.reason}</p>}
                   </div>
                   <span className={cn("text-xs font-medium px-2 py-0.5 rounded-full", cfg.color)}>{r.status}</span>
@@ -183,8 +201,14 @@ export default function LeaveRequests() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground">{r.employee_name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {r.leave_type} · {r.start_date ? format(new Date(r.start_date), "MMM d") : "—"} → {r.end_date ? format(new Date(r.end_date), "MMM d, yyyy") : "—"}
-                    </p>
+  {r.start_date
+    ? format(new Date(r.start_date), "MMM d")
+    : "—"}{" "}
+  →{" "}
+  {r.end_date
+    ? format(new Date(r.end_date), "MMM d, yyyy")
+    : "—"}
+</p>
                     {r.reason && <p className="text-xs text-muted-foreground/70 mt-0.5">{r.reason}</p>}
                   </div>
                   <div className="flex gap-1 shrink-0">
@@ -223,14 +247,29 @@ export default function LeaveRequests() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>From Date</Label>
-                <Input type="date" value={form.start_date} onChange={(e) => setForm({
-  ...form,
-  start_date: e.target.value,
-})} />
+                <Input
+  type="date"
+  value={form.end_date}
+  onChange={(e) =>
+    setForm({
+      ...form,
+      end_date: e.target.value,
+    })
+  }
+/>
               </div>
               <div>
                 <Label>To Date</Label>
-                <Input type="date" value={form.to_date} onChange={(e) => setForm({ ...form, to_date: e.target.value })} />
+                <Input
+  type="date"
+  value={form.end_date}
+  onChange={(e) =>
+    setForm({
+      ...form,
+      end_date: e.target.value,
+    })
+  }
+/>
               </div>
             </div>
             <div>
@@ -244,7 +283,7 @@ export default function LeaveRequests() {
   onClick={handleSubmit}
   disabled={
     !form.start_date ||
-    !form.end_date ||
+    !form.to_date_date ||
     createMutation.isPending
   }
 >
