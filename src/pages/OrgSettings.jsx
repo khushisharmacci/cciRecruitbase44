@@ -70,18 +70,34 @@ export default function OrgSettings() {
   const saveMutation = useMutation({
   mutationFn: async (data) => {
     if (profile.id) {
-      const { error } = await supabase
-        .from("company_profile")
-        .update(data)
-        .eq("id", profile.id);
+      const { data: result, error } = await supabase
+  .from("company_profile")
+  .update(data)
+  .eq("id", profile.id)
+  .select();
 
-      if (error) throw error;
+console.log("PROFILE ID:", profile.id);
+console.log("DATA:", data);
+console.log("RESULT:", result);
+console.log("ERROR:", error);
+
+if (error) {
+  alert(error.message);
+  throw error;
+}
     } else {
-      const { error } = await supabase
-        .from("company_profile")
-        .insert([data]);
+      const { data: result, error } = await supabase
+  .from("company_profile")
+  .insert([data])
+  .select();
 
-      if (error) throw error;
+console.log("INSERT RESULT:", result);
+console.log("INSERT ERROR:", error);
+
+if (error) {
+  alert(error.message);
+  throw error;
+}
     }
   },
 
