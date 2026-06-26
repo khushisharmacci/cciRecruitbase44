@@ -26,7 +26,7 @@ export default function LeaveRequests() {
   const [form, setForm] = useState({
   leave_type: "Casual Leave",
   start_date: "",
-  to_date: "",
+  end_date: "",
   reason: ""
 });
 
@@ -63,17 +63,19 @@ export default function LeaveRequests() {
 
   const createMutation = useMutation({
   mutationFn: async (data) => {
-    console.log("Sending:", data);
+    console.log("Submitting data:", data);
 
     const { data: result, error } = await supabase
       .from("leave_requests")
       .insert([data])
       .select();
 
-    console.log("Result:", result);
-    console.log("Error:", error);
+    console.log("Supabase result:", result);
+    console.log("Supabase error:", error);
 
     if (error) throw error;
+
+    return result;
   },
 
   onSuccess: () => {
@@ -85,36 +87,72 @@ export default function LeaveRequests() {
   },
 
   onError: (err) => {
-    console.error(err);
+    console.error("Mutation Error:", err);
+    alert(err.message);
   },
 });
   const updateMutation = useMutation({
-    mutationFn: async ({
-  id,
-  status,
-}) => {
-  const { error } =
-    await supabase
+  mutationFn: async ({ id, status }) => {
+    // Update leave request
+    const { error } = await supabase
       .from("leave_requests")
-      .update({
-        status,
-      })
+      .update({ status })
       .eq("id", id);
 
-  if (error) throw error;
-},
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["leave-requests"] }),
-  });
+    if (error) throw error;
+
+    // Get updated leave request
+    const { data: leave, error: fetchError } = await supabase
+      .from("leave_requests")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    console.log("Leave:", leave);
+
+    // Create notification
+    const { data, error: notificationError } = await supabase
+      .from("notifications")
+      .insert({
+        user_id: leave.user_id,
+        company_id: leave.company_id,
+        title:
+          status === "Approved"
+            ? "Leave Approved"
+            : "Leave Rejected",
+        message:
+          status === "Approved"
+            ? `Your ${leave.leave_type} request has been approved.`
+            : `Your ${leave.leave_type} request has been rejected.`,
+        type: "General",
+        read: false,
+        created_at: new Date().toISOString(),
+      })
+      .select();
+
+    console.log("Notification result:", data);
+    console.log("Notification error:", notificationError);
+  },   // <-- THIS COMMA WAS MISSING
+
+  onSuccess: () => {
+    qc.invalidateQueries({
+      queryKey: ["leave-requests"],
+    });
+  },
+});
 
   const handleSubmit = () => {
-  console.log("Submitting", form);
+  console.log(user);
+  console.log(form);
 
   createMutation.mutate({
     user_id: user.id,
     employee_name: user.full_name,
     leave_type: form.leave_type,
     start_date: form.start_date,
-    to_date: form.to_date,
+    end_date: form.end_date,
     reason: form.reason,
     status: "Pending",
   });
@@ -124,7 +162,7 @@ export default function LeaveRequests() {
     setForm({
   leave_type: "Casual Leave",
   start_date: "",
-  to_date: "",
+  end_date: "",
   reason: ""
 });
     setDialogOpen(true);
@@ -249,11 +287,11 @@ export default function LeaveRequests() {
                 <Label>From Date</Label>
                 <Input
   type="date"
-  value={form.end_date}
+  value={form.start_date}
   onChange={(e) =>
     setForm({
       ...form,
-      end_date: e.target.value,
+      start_date: e.target.value,
     })
   }
 />
@@ -277,20 +315,25 @@ export default function LeaveRequests() {
               <Textarea value={form.reason} onChange={(e) => setForm({ ...form, reason: e.target.value })} rows={3} placeholder="Reason for leave..." />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button
-  onClick={handleSubmit}
-  disabled={
-    !form.start_date ||
-    !form.to_date_date ||
-    createMutation.isPending
-  }
->
-              {createMutation.isPending ||
-createMutation.isLoading ? "Submitting..." : "Submit Request"}
-            </Button>
-          </DialogFooter>
+          <div className="flex justify-end gap-2 mt-6">
+  <Button
+    variant="outline"
+    type="button"
+    onClick={() => setDialogOpen(false)}
+  >
+    Cancel
+  </Button>
+
+  <Button
+    type="button"
+    onClick={() => {
+      console.log("BUTTON CLICKED");
+      handleSubmit();
+    }}
+  >
+    Submit Request
+  </Button>
+</div>
         </DialogContent>
       </Dialog>
     </div>
