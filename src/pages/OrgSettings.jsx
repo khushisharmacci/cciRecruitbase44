@@ -54,7 +54,10 @@ export default function OrgSettings() {
       .from("company_profile")
       .select("*");
 
-    if (error) throw error;
+    if (error) {
+  console.error("Company profile insert error:", error);
+  throw error;
+}
 
     return data || [];
   },
