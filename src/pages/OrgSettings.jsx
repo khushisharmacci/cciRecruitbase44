@@ -159,11 +159,8 @@ if (error) {
       <Tabs defaultValue="profile">
         <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="profile" className="gap-1.5"><Building2 className="h-3.5 w-3.5" />Profile</TabsTrigger>
-          <TabsTrigger value="branding" className="gap-1.5"><Palette className="h-3.5 w-3.5" />Branding</TabsTrigger>
           <TabsTrigger value="locations" className="gap-1.5"><MapPin className="h-3.5 w-3.5" />Locations & Hours</TabsTrigger>
           <TabsTrigger value="policies" className="gap-1.5"><FileText className="h-3.5 w-3.5" />Policies</TabsTrigger>
-          <TabsTrigger value="departments" className="gap-1.5"><Users className="h-3.5 w-3.5" />Departments</TabsTrigger>
-          <TabsTrigger value="notifications" className="gap-1.5"><Bell className="h-3.5 w-3.5" />Notifications</TabsTrigger>
         </TabsList>
 
         {/* Company Profile */}
@@ -205,42 +202,6 @@ if (error) {
           </div>
         </TabsContent>
 
-        {/* Branding */}
-        <TabsContent value="branding" className="mt-5">
-          <div className="bg-card rounded-xl border border-border p-6 space-y-5">
-            <FieldGroup label="Brand Identity">
-              <div className="space-y-1.5">
-                <Label>Company Logo</Label>
-                <div className="flex items-center gap-4">
-                  {getVal("logo_url") && (
-                    <img src={getVal("logo_url")} alt="Logo" className="h-16 w-16 object-contain rounded-lg border border-border bg-muted" />
-                  )}
-                  <label className="flex items-center gap-2 h-10 px-4 border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors text-sm text-muted-foreground">
-                    {uploadingField === "logo_url" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                    Upload Logo
-                    <input type="file" className="hidden" accept=".jpg,.jpeg,.png,.svg" onChange={e => { const f = e.target.files?.[0]; if (f) handleFileUpload(f, "logo_url"); }} />
-                  </label>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label>Primary Brand Color</Label>
-                  <div className="flex items-center gap-3">
-                    <input type="color" value={getVal("brand_primary_color") || "#1e3a5f"} onChange={e => set("brand_primary_color", e.target.value)} className="h-10 w-16 rounded cursor-pointer border border-border" />
-                    <Input value={getVal("brand_primary_color")} onChange={e => set("brand_primary_color", e.target.value)} placeholder="#1e3a5f" className="flex-1" />
-                  </div>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Secondary Brand Color</Label>
-                  <div className="flex items-center gap-3">
-                    <input type="color" value={getVal("brand_secondary_color") || "#3b82f6"} onChange={e => set("brand_secondary_color", e.target.value)} className="h-10 w-16 rounded cursor-pointer border border-border" />
-                    <Input value={getVal("brand_secondary_color")} onChange={e => set("brand_secondary_color", e.target.value)} placeholder="#3b82f6" className="flex-1" />
-                  </div>
-                </div>
-              </div>
-            </FieldGroup>
-          </div>
-        </TabsContent>
 
         {/* Locations & Hours */}
         <TabsContent value="locations" className="mt-5">
@@ -281,29 +242,7 @@ if (error) {
           </div>
         </TabsContent>
 
-        {/* Departments */}
-        <TabsContent value="departments" className="mt-5">
-          <div className="bg-card rounded-xl border border-border p-6 space-y-5">
-            <FieldGroup label="Departments">
-              <div className="space-y-1.5">
-                <Label>Departments (one per line)</Label>
-                <Textarea value={getVal("departments")} onChange={e => set("departments", e.target.value)} placeholder={"Engineering\nHuman Resources\nSales\nMarketing\nFinance\nOperations"} rows={6} />
-              </div>
-            </FieldGroup>
-          </div>
-        </TabsContent>
 
-        {/* Notifications */}
-        <TabsContent value="notifications" className="mt-5">
-          <div className="bg-card rounded-xl border border-border p-6 space-y-5">
-            <FieldGroup label="Notification Preferences">
-              <div className="space-y-1.5">
-                <Label>Notification Settings</Label>
-                <Textarea value={getVal("notification_preferences")} onChange={e => set("notification_preferences", e.target.value)} placeholder={"Configure your notification preferences here...\ne.g. Send interview reminders 1 hour before\nNotify team leads of attendance issues\nWeekly performance summary every Monday"} rows={6} />
-              </div>
-            </FieldGroup>
-          </div>
-        </TabsContent>
       </Tabs>
 
       {hasChanges && (
