@@ -330,10 +330,13 @@ const {
         jd={jd}
         onOpen={setSelectedJD}
         onDelete={() => {
-          if (window.confirm(`Delete "${jd.title}"?`)) {
-            deleteMutation.mutate(jd.id);
-          }
-        }}
+  console.log("JD:", jd);
+  console.log("JD ID:", jd.id);
+
+  if (window.confirm(`Delete "${jd.title}"?`)) {
+    deleteMutation.mutate(jd);
+  }
+}}
       />
     ))}
   </div>
