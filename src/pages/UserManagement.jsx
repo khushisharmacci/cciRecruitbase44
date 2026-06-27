@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { can, ROLE_LABELS, ASSIGNABLE_ROLE_LIST, getRoleLevel, USER_STATUS_LABELS, assignableRoles } from "@/lib/roles";
-import { Users, UserPlus, Shield, Search, Pencil, Mail, Loader2, CheckCircle2, Ban, Clock, RefreshCw } from "lucide-react";
+import { Users, UserPlus, Shield, Search, Pencil, Mail, Loader2, CheckCircle2, Ban, Clock, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -102,6 +102,28 @@ const isMaster = true;
 
   onError: (error) => {
     toast.error(error.message || "Failed to update user");
+  },
+});
+const deleteUser = useMutation({
+  mutationFn: async (id) => {
+    const { error } = await supabase
+      .from("users")
+      .delete()
+      .eq("id", id);
+
+    if (error) throw error;
+  },
+
+  onSuccess: () => {
+    queryClient.invalidateQueries({
+      queryKey: ["all-users"],
+    });
+
+    toast.success("User deleted");
+  },
+
+  onError: (error) => {
+    toast.error(error.message || "Failed to delete user");
   },
 });
 
@@ -334,7 +356,7 @@ const isMaster = true;
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        {u.id !== user?.id && (
+                        {u.id !== user?.id && u.role !== "ceo" && (
                           <>
                             {status === "pending_approval" && can.approveUsers(user) && (
                               <Button size="sm" variant="outline" className="gap-1 h-7 text-xs border-green-500/30 text-green-400 hover:bg-green-500/15" onClick={() => handleApprove(u)}>
@@ -356,6 +378,24 @@ const isMaster = true;
                         <Button size="sm" variant="outline" className="gap-1 h-7 text-xs" onClick={() => setEditUser({ ...u })}>
                           <Pencil className="h-3 w-3" /> Edit
                         </Button>
+                        {u.id !== user?.id && (
+  <Button
+  size="icon"
+  variant="ghost"
+  className="h-7 w-7 text-red-400 hover:bg-red-500/15"
+  onClick={() => {
+    if (
+      window.confirm(
+        `Delete ${u.full_name || u.email}?`
+      )
+    ) {
+      deleteUser.mutate(u.id);
+    }
+  }}
+>
+  <Trash2 className="h-3 w-3" />
+</Button>
+)}
                       </div>
                     </td>
                   </tr>
