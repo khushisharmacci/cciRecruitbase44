@@ -95,25 +95,21 @@ export default function Candidates() {
 },
     onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["candidates"] });setDeleteId(null);}
   });
-
-  const filtered = candidates.filter((c) => {
-    useEffect(() => {
+useEffect(() => {
   setSelectedCandidates([]);
 }, [search, statusFilter]);
+  const filtered = candidates.filter((c) => {
     const matchSearch = !search || c.full_name?.toLowerCase().includes(search.toLowerCase()) || c.email?.toLowerCase().includes(search.toLowerCase()) || c.skills?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
     return matchSearch && matchStatus;
   });
 
-  const handleSave = (data) => {
-    const handleDeleteSelected = async () => {
+  const handleDeleteSelected = async () => {
   if (
     !window.confirm(
       `Delete ${selectedCandidates.length} candidate(s)?`
     )
-  ) {
-    return;
-  }
+  ) return;
 
   const { error } = await supabase
     .from("candidates")
@@ -128,19 +124,21 @@ export default function Candidates() {
   setSelectedCandidates([]);
 
   queryClient.invalidateQueries({
-    queryKey: ["candidates"]
+    queryKey: ["candidates"],
   });
 };
-    if (editCandidate) {
-      updateMutation.mutate({ id: editCandidate.id, data });
-    } else {
-      createMutation.mutate(data);
-    }
-  };
+
+const handleSave = (data) => {
+  if (editCandidate) {
+    updateMutation.mutate({ id: editCandidate.id, data });
+  } else {
+    createMutation.mutate(data);
+  }
+};
 
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
 
   {selectedCandidates.length > 0 && (
     <Button
