@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { CalendarDays, Plus, Check, X, Clock, UserCheck } from "lucide-react";
+import { CalendarDays, Plus, Check, X, Clock, UserCheck, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -23,6 +23,8 @@ export default function LeaveRequests() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedLeaves, setSelectedLeaves] = useState([]);
   const [form, setForm] = useState({
   leave_type: "Casual Leave",
   start_date: "",
@@ -141,6 +143,29 @@ export default function LeaveRequests() {
     });
   },
 });
+const deleteMutation = useMutation({
+  mutationFn: async (ids) => {
+    const { error } = await supabase
+      .from("leave_requests")
+      .delete()
+      .in("id", ids);
+
+    if (error) throw error;
+  },
+
+  onSuccess: () => {
+    qc.invalidateQueries({
+      queryKey: ["leave-requests"],
+    });
+
+    setSelectionMode(false);
+    setSelectedLeaves([]);
+  },
+
+  onError: (err) => {
+    alert(err.message);
+  },
+});
 
   const handleSubmit = () => {
   console.log(user);
@@ -155,6 +180,18 @@ export default function LeaveRequests() {
     reason: form.reason,
     status: "Pending",
   });
+};
+
+const handleDeleteSelected = () => {
+  if (selectedLeaves.length === 0) return;
+
+  if (
+    window.confirm(
+      `Delete ${selectedLeaves.length} leave request(s)?`
+    )
+  ) {
+    deleteMutation.mutate(selectedLeaves);
+  }
 };
 
   const openAdd = () => {
@@ -175,9 +212,48 @@ export default function LeaveRequests() {
           <h3 className="font-semibold text-foreground flex items-center gap-2">
             <CalendarDays className="h-5 w-5 text-primary" /> Leave Requests
           </h3>
-          <Button size="sm" onClick={openAdd} className="gap-2">
-            <Plus className="h-4 w-4" /> Request Leave
-          </Button>
+          <div className="flex gap-2">
+
+  {selectionMode && (
+    <>
+      <Button
+        variant="destructive"
+        onClick={handleDeleteSelected}
+        disabled={selectedLeaves.length === 0}
+      >
+        Delete Selected ({selectedLeaves.length})
+      </Button>
+
+      <Button
+        variant="outline"
+        onClick={() => {
+          setSelectionMode(false);
+          setSelectedLeaves([]);
+        }}
+      >
+        Cancel
+      </Button>
+    </>
+  )}
+
+  <Button
+    variant="outline"
+    size="icon"
+    onClick={() => setSelectionMode(true)}
+  >
+    <Trash2 className="h-4 w-4 text-red-400" />
+  </Button>
+
+  <Button
+    size="sm"
+    onClick={openAdd}
+    className="gap-2"
+  >
+    <Plus className="h-4 w-4" />
+    Request Leave
+  </Button>
+
+</div>
         </div>
 
         {isLoading ? (
@@ -190,7 +266,26 @@ export default function LeaveRequests() {
               const cfg = statusConfig[r.status] || statusConfig["Pending"];
               const StatusIcon = cfg.icon;
               return (
-                <div key={r.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                <div
+  key={r.id}
+  className="flex items-center gap-3 p-3 rounded-lg bg-muted/50"
+>
+
+  {selectionMode && (
+    <input
+      type="checkbox"
+      checked={selectedLeaves.includes(r.id)}
+      onChange={(e) => {
+        if (e.target.checked) {
+          setSelectedLeaves(prev => [...prev, r.id]);
+        } else {
+          setSelectedLeaves(prev =>
+            prev.filter(id => id !== r.id)
+          );
+        }
+      }}
+    />
+  )}
                   <div className={cn("h-8 w-8 rounded-lg flex items-center justify-center shrink-0", cfg.color)}>
                     <StatusIcon className="h-4 w-4" />
                   </div>
@@ -230,6 +325,29 @@ export default function LeaveRequests() {
             <p className="text-muted-foreground text-sm text-center py-6">No pending leave requests</p>
           ) : (
             <div className="space-y-2">
+
+  {selectionMode && (
+    <Button
+      variant="outline"
+      size="sm"
+      className="mb-2"
+      onClick={() => {
+        if (
+          selectedLeaves.length === myRequests.length
+        ) {
+          setSelectedLeaves([]);
+        } else {
+          setSelectedLeaves(
+            myRequests.map(r => r.id)
+          );
+        }
+      }}
+    >
+      {selectedLeaves.length === myRequests.length
+        ? "Unselect All"
+        : "Select All"}
+    </Button>
+  )}
               {pendingRequests.map((r) => (
                 <div key={r.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                   <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-xs font-bold shrink-0">
