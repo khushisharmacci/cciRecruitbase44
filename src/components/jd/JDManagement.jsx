@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import ReactMarkdown from "react-markdown";
 
-function JDCard({ jd, onOpen }) {
+function JDCard({ jd, onOpen, onDelete }) {
   const [expanded, setExpanded] = useState(false);
   const isLong = jd.content && jd.content.length > 200;
   const preview = expanded ? jd.content : (jd.content || "").slice(0, 200);
@@ -25,7 +25,20 @@ function JDCard({ jd, onOpen }) {
           <h3 className="font-semibold text-foreground truncate">{jd.title}</h3>
           {jd.client_name && <p className="text-sm text-muted-foreground">{jd.client_name}</p>}
         </div>
-        {jd.publicUrl && <FileText className="h-5 w-5 text-primary shrink-0" />}
+        <div className="flex items-center gap-2">
+
+  {jd.publicUrl && (
+    <FileText className="h-5 w-5 text-primary" />
+  )}
+
+  <button
+    onClick={onDelete}
+    className="h-7 w-7 rounded-md bg-red-500/10 hover:bg-red-500/20 flex items-center justify-center"
+  >
+    <Trash2 className="h-3.5 w-3.5 text-red-400" />
+  </button>
+
+</div>
       </div>
       <div className="text-xs text-muted-foreground">
         Created: {jd.created_date ? format(new Date(jd.created_date), "MMM d, yyyy") : "—"}
@@ -309,7 +322,15 @@ const {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {jds.map((jd) => (
             <div key={jd.id} className="relative group">
-              <JDCard jd={jd} onOpen={setSelectedJD} />
+              <JDCard
+    jd={jd}
+    onOpen={setSelectedJD}
+    onDelete={() => {
+        if (window.confirm(`Delete "${jd.title}"?`)) {
+            deleteMutation.mutate(jd.id);
+        }
+    }}
+/>
               <button
   onClick={() => {
     if (
