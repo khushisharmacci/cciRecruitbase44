@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useTenant } from "@/lib/tenant";
@@ -31,6 +31,7 @@ export default function Candidates() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editCandidate, setEditCandidate] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+  const [selectedCandidates, setSelectedCandidates] = useState([]);
 
   const { data: candidates = [], isLoading } = useQuery({
     queryKey: ["candidates", companyId],
@@ -96,12 +97,40 @@ export default function Candidates() {
   });
 
   const filtered = candidates.filter((c) => {
+    useEffect(() => {
+  setSelectedCandidates([]);
+}, [search, statusFilter]);
     const matchSearch = !search || c.full_name?.toLowerCase().includes(search.toLowerCase()) || c.email?.toLowerCase().includes(search.toLowerCase()) || c.skills?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
     return matchSearch && matchStatus;
   });
 
   const handleSave = (data) => {
+    const handleDeleteSelected = async () => {
+  if (
+    !window.confirm(
+      `Delete ${selectedCandidates.length} candidate(s)?`
+    )
+  ) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from("candidates")
+    .delete()
+    .in("id", selectedCandidates);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  setSelectedCandidates([]);
+
+  queryClient.invalidateQueries({
+    queryKey: ["candidates"]
+  });
+};
     if (editCandidate) {
       updateMutation.mutate({ id: editCandidate.id, data });
     } else {
@@ -111,15 +140,29 @@ export default function Candidates() {
 
   return (
     <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Candidates</h1>
-          <p className="text-muted-foreground text-sm">{candidates.length} total candidates in your pipeline</p>
-        </div>
-        <Button onClick={() => {setEditCandidate(null);setDialogOpen(true);}} className="gap-2">
-          <Plus className="h-4 w-4" /> Add Candidate
-        </Button>
-      </div>
+      <div className="flex gap-2">
+
+  {selectedCandidates.length > 0 && (
+    <Button
+      variant="destructive"
+      onClick={handleDeleteSelected}
+    >
+      Delete Selected ({selectedCandidates.length})
+    </Button>
+  )}
+
+  <Button
+    onClick={() => {
+      setEditCandidate(null);
+      setDialogOpen(true);
+    }}
+    className="gap-2"
+  >
+    <Plus className="h-4 w-4" />
+    Add Candidate
+  </Button>
+
+</div>
 
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
@@ -146,18 +189,71 @@ export default function Candidates() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-border bg-muted/50">
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Name</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">Role</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">Experience</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Status</th>
-                  <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden sm:table-cell">Source</th>
-                  <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
+  <tr className="border-b border-border bg-muted/50">
+
+    <th className="w-12 px-4 py-3">
+      <input
+        type="checkbox"
+        checked={
+          filtered.length > 0 &&
+          selectedCandidates.length === filtered.length
+        }
+        onChange={(e) => {
+          if (e.target.checked) {
+            setSelectedCandidates(filtered.map(c => c.id));
+          } else {
+            setSelectedCandidates([]);
+          }
+        }}
+      />
+    </th>
+
+    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+      Name
+    </th>
+
+    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden md:table-cell">
+      Role
+    </th>
+
+    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden lg:table-cell">
+      Experience
+    </th>
+
+    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+      Status
+    </th>
+
+    <th className="text-left px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider hidden sm:table-cell">
+      Source
+    </th>
+
+    <th className="text-right px-4 py-3 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+      Actions
+    </th>
+
+  </tr>
+</thead>
               <tbody className="divide-y divide-border">
                 {filtered.map((c) =>
               <tr key={c.id} className="hover:bg-muted/30 transition-colors">
+
+               <td className="px-4 py-3">
+  <input
+    type="checkbox"
+    checked={selectedCandidates.includes(c.id)}
+    onChange={(e) => {
+      if (e.target.checked) {
+        setSelectedCandidates(prev => [...prev, c.id]);
+      } else {
+        setSelectedCandidates(prev =>
+          prev.filter(id => id !== c.id)
+        );
+      }
+    }}
+  />
+</td>
+
                     <td className="px-4 py-3">
                       <div>
                         <p className="text-sm font-medium text-foreground">{c.full_name}</p>

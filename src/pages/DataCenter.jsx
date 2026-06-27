@@ -39,6 +39,33 @@ const { data: folders = [], isLoading: loadingFolders } = useQuery({
       .select("*");
 
     if (error) throw error;
+
+const handleDelete = async (file) => {
+  if (!window.confirm(`Delete "${file.name}"?`)) return;
+
+  try {
+    // Delete database record
+    const { error } = await supabase
+      .from("data_files")
+      .delete()
+      .eq("id", file.id);
+
+    if (error) throw error;
+
+    // Delete from Storage (if applicable)
+    if (file.storage_path) {
+      await supabase.storage
+        .from("data-files") // replace with your bucket name
+        .remove([file.storage_path]);
+    }
+
+    refetch(); // or queryClient.invalidateQueries(...)
+  } catch (err) {
+    console.error(err);
+    alert(err.message);
+  }
+};
+
     return data || [];
   },
 });
@@ -245,14 +272,23 @@ const handleCreateFolder = async (name) => {
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex gap-1">
-                            <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => setOpenFile(file)}>
-                              Open
-                            </Button>
-                            {canEdit && (
-                              <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => handleDeleteFile(file)} disabled={deletingId === file.id}>
-                                {deletingId === file.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                              </Button>
-                            )}
+                            <Button
+  size="sm"
+  variant="ghost"
+  className="h-8 w-8 p-0 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 hover:text-blue-300"
+  onClick={() => onOpen(file)}
+>
+  <Eye className="h-4 w-4" />
+</Button>
+
+<Button
+  size="sm"
+  variant="ghost"
+  className="h-8 w-8 p-0 bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:text-red-300"
+  onClick={() => onDelete(file)}
+>
+  <Trash2 className="h-4 w-4" />
+</Button>
                           </div>
                         </td>
                       </tr>
