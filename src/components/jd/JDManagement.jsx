@@ -312,44 +312,32 @@ const {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-12"><div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" /></div>
-      ) : jds.length === 0 ? (
-        <div className="bg-card rounded-xl border border-border p-12 text-center">
-          <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-muted-foreground text-sm">No job descriptions yet. Click "Add JD" to get started.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {jds.map((jd) => (
-            <div key={jd.id} className="relative group">
-              <JDCard
-    jd={jd}
-    onOpen={setSelectedJD}
-    onDelete={() => {
-        if (window.confirm(`Delete "${jd.title}"?`)) {
+  <div className="flex justify-center py-12">
+    <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+  </div>
+) : jds.length === 0 ? (
+  <div className="bg-card rounded-xl border border-border p-12 text-center">
+    <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
+    <p className="text-muted-foreground text-sm">
+      No job descriptions yet. Click "Add JD" to get started.
+    </p>
+  </div>
+) : (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {jds.map((jd) => (
+      <JDCard
+        key={jd.id}
+        jd={jd}
+        onOpen={setSelectedJD}
+        onDelete={() => {
+          if (window.confirm(`Delete "${jd.title}"?`)) {
             deleteMutation.mutate(jd.id);
-        }
-    }}
-/>
-              <button
-  onClick={() => {
-    if (
-      window.confirm(
-        `Delete "${jd.title}"? This action cannot be undone.`
-      )
-    ) {
-      deleteMutation.mutate(jd);
-    }
-  }}
-  className="absolute top-3 right-3 h-7 w-7 rounded-lg bg-destructive/10 hover:bg-destructive/20 flex items-center justify-center"
->
-  <Trash2 className="h-3.5 w-3.5 text-red-400" />
-</button>
-            </div>
-          ))}
-        </div>
-      )}
-
+          }
+        }}
+      />
+    ))}
+  </div>
+)}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
