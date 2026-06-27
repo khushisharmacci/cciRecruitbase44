@@ -222,16 +222,29 @@ export default function JDManagement() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id) => {
-  const { error } = await supabase
-    .from("job_descriptions")
-    .delete()
-    .eq("id", id);
+  mutationFn: async (jd) => {
+    if (jd.publicUrl) {
+      const fileName = jd.publicUrl.split("/").pop();
 
-  if (error) throw error;
-},
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["job-descriptions"] }),
-  });
+      await supabase.storage
+        .from("job-descriptions")
+        .remove([fileName]);
+    }
+
+    const { error } = await supabase
+      .from("job_descriptions")
+      .delete()
+      .eq("id", jd.id);
+
+    if (error) throw error;
+  },
+
+  onSuccess: () => {
+    queryClient.invalidateQueries({
+      queryKey: ["job-descriptions"],
+    });
+  },
+});
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -298,11 +311,19 @@ const {
             <div key={jd.id} className="relative group">
               <JDCard jd={jd} onOpen={setSelectedJD} />
               <button
-                onClick={() => deleteMutation.mutate(jd.id)}
-                className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity h-7 w-7 rounded-lg bg-destructive/10 hover:bg-destructive/20 flex items-center justify-center"
-              >
-                <Trash2 className="h-3.5 w-3.5 text-red-400" />
-              </button>
+  onClick={() => {
+    if (
+      window.confirm(
+        `Delete "${jd.title}"? This action cannot be undone.`
+      )
+    ) {
+      deleteMutation.mutate(jd);
+    }
+  }}
+  className="absolute top-3 right-3 h-7 w-7 rounded-lg bg-destructive/10 hover:bg-destructive/20 flex items-center justify-center"
+>
+  <Trash2 className="h-3.5 w-3.5 text-red-400" />
+</button>
             </div>
           ))}
         </div>
