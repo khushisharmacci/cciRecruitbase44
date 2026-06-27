@@ -10,13 +10,21 @@ import { Badge } from "@/components/ui/badge";
 import { X } from "lucide-react";
 
 const EVENT_TYPES = [
-"Interview", "Follow-Up", "Resume Review", "Candidate Submission",
-"Offer Release", "Joining Date", "Candidate Documentation",
-"Client Meeting", "Client Follow-Up", "Requirement Deadline",
-"Contract Renewal", "Agreement Expiry",
-"Attendance Approval", "Leave Approval", "Performance Review", "Team Meeting",
-"Task", "Reminder", "Note", "Personal Follow-Up",
-"Revenue Review", "Monthly Report", "KPI Review", "Executive Meeting"];
+  "Interview",
+  "Follow-Up",
+  "Resume Review",
+  "Candidate Submission",
+  "Offer Release",
+  "Joining Date",
+  "Candidate Documentation",
+  "Client Follow-Up",
+  "Requirement Deadline",
+  "Team Meeting",
+  "Task",
+  "Reminder",
+  "Monthly Report",
+  "Custom",
+];
 
 
 const REMINDER_OPTIONS = [
@@ -34,10 +42,20 @@ const PRIORITIES = ["Critical", "High", "Medium", "Low"];
 const RECURRENCES = ["None", "Daily", "Weekly", "Monthly"];
 
 const defaultForm = {
-  title: "", description: "", event_type: "Meeting", priority: "Medium",
-  start_datetime: "", end_datetime: "", all_day: false, location: "",
-  assigned_to: "", related_candidate: "", related_client: "",
-  reminders: [], recurrence: "None"
+  title: "",
+  description: "",
+  event_type: "Meeting",
+  custom_event: "",
+  priority: "Medium",
+  start_datetime: "",
+  end_datetime: "",
+  all_day: false,
+  location: "",
+  assigned_to: "",
+  related_candidate: "",
+  related_client: "",
+  reminders: [],
+  recurrence: "None",
 };
 
 export default function EventForm({ open, onOpenChange, event, onSave, isLoading }) {
@@ -68,11 +86,22 @@ export default function EventForm({ open, onOpenChange, event, onSave, isLoading
 
   const handleSubmit = (e) => {
   e.preventDefault();
+  if (
+  form.event_type === "Custom" &&
+  !form.custom_event.trim()
+) {
+  alert("Please enter a custom event name.");
+  return;
+}
 
   const payload = {
-    ...form,
-    end_datetime: form.end_datetime || null,
-  };
+  ...form,
+  event_type:
+    form.event_type === "Custom"
+      ? form.custom_event
+      : form.event_type,
+  end_datetime: form.end_datetime || null,
+};
 
   console.log("PAYLOAD", payload);
 
@@ -99,6 +128,22 @@ export default function EventForm({ open, onOpenChange, event, onSave, isLoading
                 <SelectContent>{EVENT_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
               </Select>
             </div>
+            {form.event_type === "Custom" && (
+  <div className="mt-3">
+    <Label>Custom Event Name</Label>
+
+    <Input
+      value={form.custom_event}
+      placeholder="e.g. Campus Placement Drive"
+      onChange={(e) =>
+        setForm({
+          ...form,
+          custom_event: e.target.value,
+        })
+      }
+    />
+  </div>
+)}
             <div>
               <Label>Priority</Label>
               <Select value={form.priority} onValueChange={(v) => setForm({ ...form, priority: v })}>

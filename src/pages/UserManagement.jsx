@@ -222,7 +222,7 @@ const deleteUser = useMutation({
       <div className="p-8 text-center">
         <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
         <p className="font-semibold text-foreground">Access Restricted</p>
-        <p className="text-sm text-muted-foreground mt-1">Only Company Admins and Super Admins can manage users.</p>
+        <p className="text-sm text-muted-foreground mt-1">Only Company Admins can manage users.</p>
       </div>
     );
   }
