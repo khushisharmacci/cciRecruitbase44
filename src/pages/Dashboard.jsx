@@ -9,6 +9,7 @@ import UpcomingEventsWidget from "../components/events/UpcomingEventsWidget";
 import { Calendar, Clock, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
+import DailyReportStatus from "../components/dashboard/DailyReportStatus";
 
 const HERO_IMG = "banner2.jpeg";
 
@@ -119,7 +120,9 @@ export default function Dashboard() {
 
       <KPICards data={kpiData} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<DailyReportStatus />
+
+<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <RecruitmentFunnel data={funnelData} />
         </div>

@@ -66,9 +66,17 @@ export default function EventForm({ open, onOpenChange, event, onSave, isLoading
       setForm({
         ...defaultForm,
         ...event,
-        reminders: event.reminders ? JSON.parse(event.reminders) : [],
-        start_datetime: event.start_datetime ? event.start_datetime.slice(0, 16) : "",
-        end_datetime: event.end_datetime ? event.end_datetime.slice(0, 16) : ""
+        reminders:
+  typeof event.reminders === "string"
+    ? (event.reminders ? JSON.parse(event.reminders) : [])
+    : (event.reminders || []),
+        start_datetime: event.start_datetime
+  ? event.start_datetime.slice(0, 16)
+  : "",
+
+end_datetime: event.end_datetime
+  ? event.end_datetime.slice(0, 16)
+  : "",
       });
     } else {
       setForm(defaultForm);
@@ -100,10 +108,10 @@ export default function EventForm({ open, onOpenChange, event, onSave, isLoading
     form.event_type === "Custom"
       ? form.custom_event
       : form.event_type,
-  end_datetime: form.end_datetime || null,
-};
 
-  console.log("PAYLOAD", payload);
+  start_datetime: form.start_datetime || null,
+  end_datetime: form.end_datetime || null,
+  };
 
   onSave(payload);
 };

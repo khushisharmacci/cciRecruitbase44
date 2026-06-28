@@ -1,5 +1,6 @@
 import { AuthProvider } from "@/lib/AuthContext";
 import { Navigate } from "react-router-dom";
+import DailyReport from "./pages/DailyReport";
 import { Toaster } from "@/components/ui/toaster";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClientInstance } from "@/lib/query-client";
@@ -59,7 +60,7 @@ function App() {
       <Route path="/targets" element={<Targets />} />
       <Route path="/revenue" element={<Revenue />} />
       <Route path="/attendance" element={<Attendance />} />
-
+      <Route path="/daily-report" element={<DailyReport />} />
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/help" element={<Help />} />
 

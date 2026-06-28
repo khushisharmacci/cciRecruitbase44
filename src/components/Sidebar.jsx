@@ -1,11 +1,31 @@
 import { supabase } from "@/lib/supabase";
 import { Link, useLocation } from "react-router-dom";
+import DailyReport from "@/pages/DailyReport";
 import { useAuth } from "@/lib/AuthContext";
 import {
-  LayoutDashboard, Users, FileText, BarChart3, Database,
-  Building2, Handshake, UsersRound, Target, IndianRupee,
-  HelpCircle, Bell, LogOut, ChevronLeft, ChevronRight, X, Clock,
-  Settings, Shield, UserCog, CalendarCheck, MessageSquare
+  LayoutDashboard,
+  Users,
+  FileText,
+  BarChart3,
+  Database,
+  Building2,
+  Handshake,
+  UsersRound,
+  Target,
+  IndianRupee,
+  HelpCircle,
+  Bell,
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Clock,
+  Settings,
+  Shield,
+  UserCog,
+  CalendarCheck,
+  MessageSquare,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { can, ROLE_LABELS } from "@/lib/roles";
@@ -15,7 +35,6 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
   const location = useLocation();
   const { data: notifications = [] } = useQuery({
   queryKey: ["sidebar-notifications"],
-  refetchInterval: 5000,
   queryFn: async () => {
     const { data, error } = await supabase
       .from("notifications")
@@ -60,7 +79,11 @@ const role = user?.role || "recruiter";
     if (can.viewTargets(user)) items.push({ path: "/targets", label: "Targets", icon: Target });
     if (can.viewRevenue(user)) items.push({ path: "/revenue", label: "Revenue", icon: IndianRupee });
     if (can.viewAttendance(user)) items.push({ path: "/attendance", label: "Attendance", icon: Clock });
-
+items.push({
+  path: "/daily-report",
+  label: "Daily Report",
+  icon: ClipboardList,
+});
     return items;
   };
 
