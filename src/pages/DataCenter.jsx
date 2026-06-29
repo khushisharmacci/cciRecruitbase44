@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Upload, Search, Grid3X3, List, SortDesc, Trash2, Loader2 } from "lucide-react";
+import { Upload, Search, Grid3X3, List, SortDesc, Trash2, Loader2, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useTenant } from "@/lib/tenant";
@@ -15,7 +15,7 @@ import { can } from "@/lib/roles";
 import DCStats from "@/components/datacenter/DCStats";
 import FolderSidebar from "@/components/datacenter/FolderSidebar";
 import FileCard from "@/components/datacenter/FileCard";
-import SpreadsheetViewer from "@/components/datacenter/SpreadsheetViewer";
+import SpreadsheetViewer from "@/components/spreadsheet/SpreadsheetViewer";
 import UploadWizard from "@/components/datacenter/UploadWizard";
 
 export default function DataCenter() {
@@ -65,7 +65,9 @@ const handleDelete = async (file) => {
         .remove([file.storage_path]);
     }
 
-    refetch(); // or queryClient.invalidateQueries(...)
+    queryClient.invalidateQueries({
+  queryKey: ["data-files"],
+}); // or queryClient.invalidateQueries(...)
   } catch (err) {
     console.error(err);
     alert(err.message);
@@ -154,9 +156,13 @@ const handleCreateFolder = async (name) => {
   return (
     <>
       {/* Spreadsheet Viewer overlay */}
-      {openFile &&
-      <SpreadsheetViewer file={openFile} onClose={() => setOpenFile(null)} />
-      }
+      {openFile && (
+  <SpreadsheetViewer
+    file={openFile}
+    onClose={() => setOpenFile(null)}
+  />
+)}
+
 
       <div className="p-4 md:p-6 lg:p-8 max-w-[1400px] mx-auto space-y-6">
         {/* Header */}
@@ -313,14 +319,14 @@ const handleCreateFolder = async (name) => {
 
       {/* Upload Wizard Dialog */}
       <Dialog open={showUpload} onOpenChange={setShowUpload}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+       {/*  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <UploadWizard
             folders={folders}
             onDone={handleUploadDone}
             onCreateFolder={handleCreateFolder}
             queryClient={queryClient} />
           
-        </DialogContent>
+        </DialogContent> */}
       </Dialog>
     </>);
 

@@ -65,22 +65,15 @@ export default function Candidates() {
 console.log("Candidate files:", files);
   const createMutation = useMutation({
   mutationFn: async (data) => {
-    const payload = {
-      ...data,
-    };
+    console.log("SAVING CANDIDATE:", data);
 
-    console.log("PAYLOAD:", payload);
-console.log("PAYLOAD:", JSON.stringify(payload, null, 2));
     const { data: inserted, error } = await supabase
       .from("candidates")
-      .insert([payload])
+      .insert([data])
       .select();
 
     console.log("INSERTED:", inserted);
-    console.log("ERROR MESSAGE:", error?.message);
-console.log("ERROR DETAILS:", error?.details);
-console.log("ERROR HINT:", error?.hint);
-console.log("FULL ERROR:", JSON.stringify(error, null, 2));
+    console.log("SUPABASE ERROR:", error);
 
     if (error) throw error;
   },
