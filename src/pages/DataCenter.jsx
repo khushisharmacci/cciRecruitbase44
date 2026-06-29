@@ -32,15 +32,15 @@ export default function DataCenter() {
   const [deletingId, setDeletingId] = useState(null);
   
 const { data: folders = [], isLoading: loadingFolders } = useQuery({
-  
   queryKey: ["data-folders", companyId],
   queryFn: async () => {
     const { data, error } = await supabase
       .from("data_folders")
-      .select("*");
+      .select("*")
+      .eq("company_id", companyId)
+      .order("name");
 
     if (error) throw error;
-
 
     return data || [];
   },
@@ -92,17 +92,20 @@ const handleCreateFolder = async (name) => {
   console.log("companyId:", companyId);
   console.log("folder name:", name);
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("data_folders")
     .insert([
       {
         name,
         company_id: companyId,
       },
-    ]);
+    ])
+    .select();
+
+  console.log("Inserted data:", data);
+  console.log("Insert error:", error);
 
   if (error) {
-    console.error(error);
     toast.error(error.message);
     return;
   }
