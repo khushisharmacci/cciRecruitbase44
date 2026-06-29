@@ -47,23 +47,52 @@ export default function Candidates() {
 }
   });
 
-  const createMutation = useMutation({
-    mutationFn: async (data) => {
-  const payload = {
-    ...data,
-    current_job_role: data.current_job_role
-  };
+  const { data: files = [] } = useQuery({
+  queryKey: ["candidate-files", companyId],
+  queryFn: async () => {
+  const { data, error } = await supabase
+    .from("data_files")
+    .select("*");
 
-  delete payload.current_job_role;
-
-  const { error } = await supabase
-    .from("candidates")
-    .insert([payload]);
+  console.log("DATA FILES:", data);
+  console.log("ERROR:", error);
 
   if (error) throw error;
+
+  return data || [];
 },
-    onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["candidates"] });setDialogOpen(false);}
-  });
+});
+console.log("Candidate files:", files);
+  const createMutation = useMutation({
+  mutationFn: async (data) => {
+    const payload = {
+      ...data,
+    };
+
+    console.log("PAYLOAD:", payload);
+console.log("PAYLOAD:", JSON.stringify(payload, null, 2));
+    const { data: inserted, error } = await supabase
+      .from("candidates")
+      .insert([payload])
+      .select();
+
+    console.log("INSERTED:", inserted);
+    console.log("ERROR MESSAGE:", error?.message);
+console.log("ERROR DETAILS:", error?.details);
+console.log("ERROR HINT:", error?.hint);
+console.log("FULL ERROR:", JSON.stringify(error, null, 2));
+
+    if (error) throw error;
+  },
+
+  onSuccess: () => {
+    queryClient.invalidateQueries({
+      queryKey: ["candidates"],
+    });
+
+    setDialogOpen(false);
+  },
+});
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
@@ -295,11 +324,13 @@ const handleSave = (data) => {
       }
 
       <CandidateDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        candidate={editCandidate}
-        onSave={handleSave}
-        isLoading={createMutation.isPending || updateMutation.isPending} />
+    open={dialogOpen}
+    onOpenChange={setDialogOpen}
+    candidate={editCandidate}
+    onSave={handleSave}
+    files={files}
+    isLoading={createMutation.isPending || updateMutation.isPending}
+/>
       
 
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>

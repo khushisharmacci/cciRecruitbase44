@@ -9,7 +9,14 @@ import { Textarea } from "@/components/ui/textarea";
 const statuses = ["Applied", "Screening", "Shortlisted", "Interview Scheduled", "Selected", "Offer Released", "Joined", "Rejected", "On Hold"];
 const sources = ["LinkedIn", "Job Board", "Referral", "Direct", "Agency", "Other"];
 
-export default function CandidateDialog({ open, onOpenChange, candidate, onSave, isLoading }) {
+export default function CandidateDialog({
+  open,
+  onOpenChange,
+  candidate,
+  onSave,
+  isLoading,
+  files = []
+}) {
   const [form, setForm] = useState({
   full_name: "",
   email: "",
@@ -26,6 +33,7 @@ export default function CandidateDialog({ open, onOpenChange, candidate, onSave,
   expected_ctc: "",
 
   position: "",
+  data_file_id: "",
 
   academics: "",
 
@@ -61,7 +69,7 @@ export default function CandidateDialog({ open, onOpenChange, candidate, onSave,
   expected_ctc: candidate.expected_ctc || "",
 
   position: candidate.position || "",
-
+  data_file_id: candidate.data_file_id || "",
   academics: candidate.academics || "",
 
   source: candidate.source || "LinkedIn",
@@ -94,7 +102,7 @@ export default function CandidateDialog({ open, onOpenChange, candidate, onSave,
   expected_ctc: "",
 
   position: "",
-
+  data_file_id: "",
   academics: "",
 
   source: "LinkedIn",
@@ -116,17 +124,28 @@ export default function CandidateDialog({ open, onOpenChange, candidate, onSave,
     e.preventDefault();
     onSave({
   ...form,
-  experience_years: form.experience_years
-    ? Number(form.experience_years)
-    : undefined,
 
-  current_ctc: form.current_ctc
-    ? Number(form.current_ctc)
-    : undefined,
+  candidate_date: form.candidate_date || null,
 
-  expected_ctc: form.expected_ctc
-    ? Number(form.expected_ctc)
-    : undefined
+  experience_years:
+    form.experience_years === ""
+      ? null
+      : Number(form.experience_years),
+
+  current_ctc:
+    form.current_ctc === ""
+      ? null
+      : Number(form.current_ctc),
+
+  expected_ctc:
+    form.expected_ctc === ""
+      ? null
+      : Number(form.expected_ctc),
+
+  data_file_id:
+    form.data_file_id === ""
+      ? null
+      : form.data_file_id,
 });
   };
 
@@ -200,10 +219,45 @@ export default function CandidateDialog({ open, onOpenChange, candidate, onSave,
   />
 </div>
             <div>
-              <Label>Position</Label>
-              <Input value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
-            </div>
-            <div>
+  <Label>Position</Label>
+  <Input
+    value={form.position}
+    onChange={(e) =>
+      setForm({
+        ...form,
+        position: e.target.value,
+      })
+    }
+  />
+</div>
+
+<div>
+  <Label>Spreadsheet *</Label>
+
+  <Select
+    value={form.data_file_id}
+    onValueChange={(v) =>
+      setForm({
+        ...form,
+        data_file_id: v,
+      })
+    }
+  >
+    <SelectTrigger>
+      <SelectValue placeholder="Select spreadsheet" />
+    </SelectTrigger>
+
+    <SelectContent>
+      {files.map((f) => (
+        <SelectItem key={f.id} value={f.id}>
+          {f.name}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+</div>
+
+<div>
   <Label>Academics</Label>
   <Input
     value={form.academics}
@@ -246,7 +300,7 @@ export default function CandidateDialog({ open, onOpenChange, candidate, onSave,
 
   <Input
     type="date"
-    value={form.candidate_date}
+    value={form.c_date}
     onChange={(e) =>
       setForm({
         ...form,
