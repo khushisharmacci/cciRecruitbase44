@@ -8,20 +8,24 @@ const PAGE_SIZE = 50;
 
 export default function SpreadsheetViewer({ file, onClose }) {
   console.log("VIEWER FILE", file);
+  console.log("rows_data:", file.rows_data);
+  console.log("columns:", file.columns);
+  console.log(typeof file.rows_data);
+  console.log(Array.isArray(file.rows_data));
+  console.log(typeof file.columns);
+  console.log(Array.isArray(file.columns));
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [sortCol, setSortCol] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
   const [editCell, setEditCell] = useState(null); // { row, col }
   const [editVal, setEditVal] = useState("");
-  const [rows, setRows] = useState(() => {
-    try { return JSON.parse(file.rows_data || "[]"); } catch { return []; }
-  });
+  const [rows, setRows] = useState(file.rows_data || []);
 
-  const columns = useMemo(() => {
-    try { return JSON.parse(file.columns || "[]"); } catch { return []; }
-  }, [file.columns]);
-
+const columns = useMemo(
+  () => file.columns || [],
+  [file.columns]
+);
   const filtered = useMemo(() => {
     if (!search.trim()) return rows;
     const q = search.toLowerCase();

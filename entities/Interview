@@ -12,7 +12,7 @@
     "candidate_id": {
       "type": "string"
     },
-    "position_title": {
+    "position": {
       "type": "string"
     },
     "interviewer": {

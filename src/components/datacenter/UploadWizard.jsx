@@ -20,8 +20,8 @@ import ColumnMapper from "@/components/datacenter/ColumnMapper";
 const ENTITY_FIELDS = {
   Candidate: {
     required: ["full_name", "email"],
-    optional: ["phone", "skills", "experience_years", "current_company", "current_job_role", "expected_salary", "location", "source", "position_title", "notes"],
-    labels: { full_name: "Full Name", email: "Email", phone: "Phone", skills: "Skills", experience_years: "Experience (Yrs)", current_company: "Current Company", current_job_role: "Current Role", expected_salary: "Expected Salary", location: "Location", source: "Source", position_title: "Position", notes: "Notes" },
+    optional: ["phone", "skills", "experience_years", "current_company", "current_job_role", "expected_ctc", "location", "source", "position", "notes"],
+    labels: { full_name: "Full Name", email: "Email", phone: "Phone", skills: "Skills", experience_years: "Experience (Yrs)", current_company: "Current Company", current_job_role: "Current Role", expected_ctc: "Expected CTC", location: "Location", source: "Source", position: "Position", notes: "Notes" },
     defaults: { status: "Applied" }
   },
   Client: {
@@ -56,7 +56,7 @@ const ENTITY_FIELDS = {
   }
 };
 
-const NUMERIC_FIELDS = ["experience_years", "expected_salary", "salary_min", "salary_max", "experience_min", "experience_max", "openings", "amount", "value"];
+const NUMERIC_FIELDS = ["experience_years", "expected_s", "salary_min", "salary_max", "experience_min", "experience_max", "openings", "amount", "value"];
 
 // ─── File Parsing (client-side) ──────────────────────────────────────────────
 function parseFile(file) {

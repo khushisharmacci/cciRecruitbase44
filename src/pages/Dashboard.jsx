@@ -141,7 +141,7 @@ export default function Dashboard() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground truncate">{i.candidate_name}</p>
-                    <p className="text-xs text-muted-foreground">{i.position_title}</p>
+                    <p className="text-xs text-muted-foreground">{i.position}</p>
                     <p className="text-xs text-primary mt-1">
                       {i.interview_date ? format(new Date(i.interview_date), "MMM d, h:mm a") : "TBD"}
                     </p>

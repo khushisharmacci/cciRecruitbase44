@@ -32,6 +32,7 @@ export default function DataCenter() {
   const [deletingId, setDeletingId] = useState(null);
   
 const { data: folders = [], isLoading: loadingFolders } = useQuery({
+  
   queryKey: ["data-folders", companyId],
   queryFn: async () => {
     const { data, error } = await supabase
@@ -39,6 +40,11 @@ const { data: folders = [], isLoading: loadingFolders } = useQuery({
       .select("*");
 
     if (error) throw error;
+
+
+    return data || [];
+  },
+});
 
 const handleDelete = async (file) => {
   if (!window.confirm(`Delete "${file.name}"?`)) return;
@@ -66,10 +72,7 @@ const handleDelete = async (file) => {
   }
 };
 
-    return data || [];
-  },
-});
-
+console.log("Folders:", folders);
 
   const { data: files = [], isLoading: loadingFiles } = useQuery({
     queryKey: ["data-files", companyId],
@@ -83,8 +86,12 @@ const handleDelete = async (file) => {
   return data || [];
 }
   });
+console.log("Supabase:", supabase);
 
 const handleCreateFolder = async (name) => {
+  console.log("companyId:", companyId);
+  console.log("folder name:", name);
+
   const { error } = await supabase
     .from("data_folders")
     .insert([
@@ -96,7 +103,7 @@ const handleCreateFolder = async (name) => {
 
   if (error) {
     console.error(error);
-    toast.error("Failed to create folder");
+    toast.error(error.message);
     return;
   }
 
@@ -105,7 +112,7 @@ const handleCreateFolder = async (name) => {
   });
 
   toast.success(`Folder "${name}" created`);
-};  
+};
 
   const handleDeleteFile = async (file) => {
     setDeletingId(file.id);
@@ -132,18 +139,18 @@ const handleCreateFolder = async (name) => {
     if (!search.trim()) return true;
     return f.name.toLowerCase().includes(search.toLowerCase()) || f.original_filename?.toLowerCase().includes(search.toLowerCase());
   }).sort((a, b) => {
-    if (sortBy === "newest") return new Date(b.created_date) - new Date(a.created_date);
-    if (sortBy === "oldest") return new Date(a.created_date) - new Date(b.created_date);
+    if (sortBy === "newest") return new Date(b.created_at) - new Date(a.created_at);
+    if (sortBy === "oldest") return new Date(a.created_at) - new Date(b.created_at);
     if (sortBy === "name") return a.name.localeCompare(b.name);
     if (sortBy === "rows") return (b.row_count || 0) - (a.row_count || 0);
     return 0;
   });
 
   const isLoading = loadingFolders || loadingFiles;
+  console.log("OPEN FILE", openFile);
   return (
     <>
       {/* Spreadsheet Viewer overlay */}
-      console.log("OPEN FILE", openFile);
       {openFile &&
       <SpreadsheetViewer file={openFile} onClose={() => setOpenFile(null)} />
       }
@@ -276,7 +283,7 @@ const handleCreateFolder = async (name) => {
   size="sm"
   variant="ghost"
   className="h-8 w-8 p-0 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 hover:text-blue-300"
-  onClick={() => onOpen(file)}
+  onClick={() => setOpenFile(file)}
 >
   <Eye className="h-4 w-4" />
 </Button>
@@ -285,7 +292,7 @@ const handleCreateFolder = async (name) => {
   size="sm"
   variant="ghost"
   className="h-8 w-8 p-0 bg-red-500/20 text-red-400 hover:bg-red-500/30 hover:text-red-300"
-  onClick={() => onDelete(file)}
+  onClick={() => handleDeleteFile(file)}
 >
   <Trash2 className="h-4 w-4" />
 </Button>

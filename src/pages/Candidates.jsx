@@ -99,7 +99,11 @@ useEffect(() => {
   setSelectedCandidates([]);
 }, [search, statusFilter]);
   const filtered = candidates.filter((c) => {
-    const matchSearch = !search || c.full_name?.toLowerCase().includes(search.toLowerCase()) || c.email?.toLowerCase().includes(search.toLowerCase()) || c.skills?.toLowerCase().includes(search.toLowerCase());
+    const matchSearch =
+  !search ||
+  c.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+  c.email?.toLowerCase().includes(search.toLowerCase()) ||
+  c.linkedin?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "all" || c.status === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -165,7 +169,7 @@ const handleSave = (data) => {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search by name, email or skills..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+          <Input placeholder="Search by name, email or LinkedIn..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-48"><SelectValue placeholder="Filter by status" /></SelectTrigger>

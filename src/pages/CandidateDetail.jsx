@@ -86,9 +86,9 @@ export default function CandidateDetail() {
             <div className="flex justify-between"><span className="text-muted-foreground">Current Role</span><span className="text-foreground font-medium">{candidate.current_job_role || "—"}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Company</span><span className="text-foreground font-medium">{candidate.current_company || "—"}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Experience</span><span className="text-foreground font-medium">{candidate.experience_years ? `${candidate.experience_years} years` : "—"}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Expected Salary</span><span className="text-foreground font-medium">{candidate.expected_salary ? `$${candidate.expected_salary.toLocaleString()}` : "—"}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Expected CTC</span><span className="text-foreground font-medium">{candidate.expected_ctc ? `$${candidate.expected_s.toLocaleString()}` : "—"}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Source</span><span className="text-foreground font-medium">{candidate.source || "—"}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Position</span><span className="text-foreground font-medium">{candidate.position_title || "—"}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Position</span><span className="text-foreground font-medium">{candidate.position || "—"}</span></div>
             {candidate.notes && (
   <>
     <h3 className="font-semibold text-foreground pt-4">

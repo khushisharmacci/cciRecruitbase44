@@ -41,7 +41,6 @@ export default function CandidateDialog({ open, onOpenChange, candidate, onSave,
 
   notes: ""
 });
-
   useEffect(() => {
     if (candidate) {
       setForm({
@@ -152,9 +151,7 @@ export default function CandidateDialog({ open, onOpenChange, candidate, onSave,
             </div>
             <div>
               <Label>Location</Label>
-              <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
-            </div>
-            <div>
+              <div>
   <Label>Geographical Location</Label>
   <Input
     value={form.geographical_location}
@@ -166,6 +163,8 @@ export default function CandidateDialog({ open, onOpenChange, candidate, onSave,
     }
   />
 </div>
+              <Input value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} />
+            </div>
             <div>
               <Label>Current Company</Label>
               <Input value={form.current_company} onChange={(e) => setForm({ ...form, current_company: e.target.value })} />
@@ -199,7 +198,6 @@ export default function CandidateDialog({ open, onOpenChange, candidate, onSave,
     }
   />
 </div>
-            <div>
               <Label>Position</Label>
               <Input value={form.position} onChange={(e) => setForm({ ...form, position: e.target.value })} />
             </div>
@@ -242,7 +240,7 @@ export default function CandidateDialog({ open, onOpenChange, candidate, onSave,
 </div>
 
 <div>
-  <Label>Date</Label>
+  <Label>Candidate Date</Label>
 
   <Input
     type="date"
@@ -283,13 +281,9 @@ export default function CandidateDialog({ open, onOpenChange, candidate, onSave,
     }
   />
 </div>
-        </div>
-
           <div>
-  <Label>LinkedIn</Label>
-
+        <Label>LinkedIn</Label>
   <Input
-    placeholder="https://linkedin.com/in/..."
     value={form.linkedin}
     onChange={(e) =>
       setForm({
@@ -297,8 +291,51 @@ export default function CandidateDialog({ open, onOpenChange, candidate, onSave,
         linkedin: e.target.value,
       })
     }
+    placeholder="https://linkedin.com/in/..."
+  />
+          </div>
+          <div>
+  <Label>Geographical Location</Label>
+
+  <Input
+    value={form.geographical_location}
+    onChange={(e)=>
+      setForm({
+        ...form,
+        geographical_location:e.target.value
+      })
+    }
   />
 </div>
+<div>
+    <Label>Academics</Label>
+
+    <Input
+        value={form.academics}
+        onChange={(e)=>
+            setForm({
+                ...form,
+                academics:e.target.value
+            })
+        }
+    />
+</div>
+<div className="grid grid-cols-2 gap-4">
+  <Label>Sourced By</Label>
+  <Label>Spoken By</Label>
+</div>
+<Label>Date</Label>
+
+<Input
+    type="date"
+    value={form.candidate_date}
+    onChange={(e)=>
+        setForm({
+            ...form,
+            candidate_date:e.target.value
+        })
+    }
+/>
           <div>
             <Label>Status</Label>
             <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
@@ -307,7 +344,7 @@ export default function CandidateDialog({ open, onOpenChange, candidate, onSave,
             </Select>
           </div>
           <div>
-            <Label>Remarks</Label>
+            <Label>Notes</Label>
             <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} />
           </div>
           <div className="flex justify-end gap-3 pt-2">

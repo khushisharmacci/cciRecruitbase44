@@ -6,14 +6,9 @@ import { Button } from "@/components/ui/button";
 import UserDailyReport from "@/components/daily-report/UserDailyReport";
 import CEODailyReport from "@/components/daily-report/CEODailyReport";
 
-import { can } from "@/lib/roles";
-
-const isCEO = can.viewAllReports(user);
-
 export default function DailyReport() {
   const { user } = useAuth();
-
-  // CEO = Super Admin
+console.log("AUTH USER", user);
   const isCEO = user?.role === "ceo";
 
   const [ceoView, setCeoView] = useState("team");

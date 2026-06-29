@@ -68,7 +68,7 @@ function JDDetail({ jd, onBack }) {
   let query = supabase
     .from("candidates")
     .select("*")
-    .eq("position_title", jd.title);
+    .eq("position", jd.title);
 
   const filters = tenantFilter();
 

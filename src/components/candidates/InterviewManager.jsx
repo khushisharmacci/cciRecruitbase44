@@ -110,7 +110,7 @@ export default function InterviewManager({ candidate }) {
     const data = {
       candidate_id: candidate.id,
       candidate_name: candidate.full_name,
-      position_title: candidate.position_title || "",
+      position: candidate.position || "",
       ...form,
     };
     if (editing) {

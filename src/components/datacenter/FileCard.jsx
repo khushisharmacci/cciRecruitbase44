@@ -12,7 +12,7 @@ const SYNC_BADGE = {
 export default function FileCard({ file, onOpen, onDelete }) {
   const badge = SYNC_BADGE[file.sync_status] || SYNC_BADGE.synced;
   const SyncIcon = badge.icon;
-
+console.log(file);
   return (
     <div className="bg-card rounded-xl border border-border hover:border-primary/40 hover:shadow-md transition-all p-4 group">
       <div className="flex items-start gap-3">
@@ -33,9 +33,9 @@ export default function FileCard({ file, onOpen, onDelete }) {
       </div>
       <div className="flex items-center justify-between mt-3 pt-3 border-t border-border">
         <span className="text-xs text-muted-foreground">
-          {file.created_date ? format(new Date(file.created_date), "MMM d, yyyy") : ""}
+          {file.created_at ? format(new Date(file.created_at), "MMM d, yyyy") : ""}
         </span>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex gap-1 opacity-100">
           <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => onOpen(file)}>
             <Eye className="h-3.5 w-3.5" />
           </Button>

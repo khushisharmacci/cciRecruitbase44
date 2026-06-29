@@ -28,7 +28,7 @@
     "current_role": {
       "type": "string"
     },
-    "expected_salary": {
+    "expected_ctc": {
       "type": "number"
     },
     "location": {
@@ -76,7 +76,7 @@
     "assigned_to": {
       "type": "string"
     },
-    "position_title": {
+    "position": {
       "type": "string"
     },
     "photo_url": {
