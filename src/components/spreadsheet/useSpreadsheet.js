@@ -1,191 +1,188 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  useMutation,
-  useQuery,
-  useQueryClient,
+    useMutation,
+    useQuery,
+    useQueryClient,
 } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
 export default function useSpreadsheet(fileId) {
-  const queryClient = useQueryClient();
+    const queryClient = useQueryClient();
 
-  const [search, setSearch] = useState("");
-  const [selectedRows, setSelectedRows] = useState([]);
-  const [sortColumn, setSortColumn] = useState("full_name");
-  const [sortDirection, setSortDirection] = useState("asc");
-  const [saving, setSaving] = useState(false);
+    const [search, setSearch] = useState("");
+    const [rows, setRows] = useState([]);
+    const [columns, setColumns] = useState([]);
+    const [selectedRows, setSelectedRows] = useState([]);
+    const [saving, setSaving] = useState(false);
 
-  const {
-    data: rows = [],
-    isLoading,
-    error,
-    refetch,
-  } = useQuery({
-    queryKey: ["spreadsheet", fileId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("candidates")
-        .select("*")
-        .eq("data_file_id", fileId)
-        .order("created_at");
+    const {
+        data,
+        isLoading,
+        error,
+        refetch,
+    } = useQuery({
+        queryKey: ["spreadsheet", fileId],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from("data_files")
+                .select("columns, rows_data")
+                .eq("id", fileId)
+                .single();
 
-      if (error) throw error;
+            if (error) throw error;
 
-      return data ?? [];
-    },
-  });
-
-  const filteredRows = useMemo(() => {
-    let list = [...rows];
-
-    if (search) {
-      list = list.filter((row) =>
-        Object.values(row)
-          .join(" ")
-          .toLowerCase()
-          .includes(search.toLowerCase())
-      );
-    }
-
-    list.sort((a, b) => {
-      const first = (a[sortColumn] ?? "").toString();
-      const second = (b[sortColumn] ?? "").toString();
-
-      return sortDirection === "asc"
-        ? first.localeCompare(second)
-        : second.localeCompare(first);
+            return data;
+        },
     });
 
-    return list;
-  }, [rows, search, sortColumn, sortDirection]);
+    useEffect(() => {
+        if (!data) return;
 
-  function sort(column) {
-    if (column === sortColumn) {
-      setSortDirection((prev) =>
-        prev === "asc" ? "desc" : "asc"
-      );
-    } else {
-      setSortColumn(column);
-      setSortDirection("asc");
+        setColumns(data.columns ?? []);
+        setRows(
+    (data.rows_data ?? []).map((row) => ({
+        __id: row.__id ?? crypto.randomUUID(),
+        ...row,
+    }))
+);
+    }, [data]);
+
+    const filteredRows = useMemo(() => {
+        if (!search) return rows;
+
+        return rows.filter((row) =>
+            Object.values(row)
+                .join(" ")
+                .toLowerCase()
+                .includes(search.toLowerCase())
+        );
+    }, [rows, search]);
+
+    async function saveSpreadsheet(updatedRows = rows) {
+        setSaving(true);
+
+        const { error } = await supabase
+            .from("data_files")
+            .update({
+                rows_data: updatedRows,
+            })
+            .eq("id", fileId);
+
+        setSaving(false);
+
+        if (error) console.error(error);
     }
-  }
 
-  async function updateCell(id, column, value) {
-    setSaving(true);
+    async function updateCell(rowId, columnName, value) {
+    const updated = rows.map((row) =>
+        row.__id === rowId
+            ? {
+                  ...row,
+                  [columnName]: value,
+              }
+            : row
+    );
 
-    const { error } = await supabase
-      .from("candidates")
-      .update({
-        [column]: value,
-      })
-      .eq("id", id);
+    setRows(updated);
 
-    setSaving(false);
+    clearTimeout(window.sheetSave);
 
-    if (error) return;
+    window.sheetSave = setTimeout(() => {
+        saveSpreadsheet(updated);
+    }, 600);
+}
 
-    queryClient.invalidateQueries({
-      queryKey: ["spreadsheet", fileId],
+    const addRow = useMutation({
+        mutationFn: async () => {
+            const blank = {};
+
+columns.forEach((column) => {
+    blank[column] = "";
+});
+
+blank.__id = crypto.randomUUID();
+
+            const updated = [...rows, blank];
+
+            setRows(updated);
+
+            await saveSpreadsheet(updated);
+        },
     });
-  }
 
-  const addRow = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
-        .from("candidates")
-        .insert({
-          data_file_id: fileId,
-          full_name: "",
-          email: "",
-          phone: "",
-          status: "",
-          location: "",
+    const deleteRows = useMutation({
+        mutationFn: async () => {
+            if (!selectedRows.length) return;
+
+            const updated = rows.filter(
+                (_, index) => !selectedRows.includes(index)
+            );
+
+            setRows(updated);
+            setSelectedRows([]);
+
+            await saveSpreadsheet(updated);
+        },
+    });
+
+    function exportCSV() {
+        const csv = [
+            columns,
+            ...filteredRows.map((row) =>
+                columns.map((column) => {
+    const value = row[column];
+
+    if (value == null) return "";
+
+    return `"${String(value).replaceAll('"', '""')}"`;
+})
+            ),
+        ]
+            .map((r) => r.join(","))
+            .join("\n");
+
+        const blob = new Blob([csv], {
+            type: "text/csv",
         });
 
-      if (error) throw error;
-    },
+        const url = URL.createObjectURL(blob);
 
-    onSuccess() {
-      queryClient.invalidateQueries({
-        queryKey: ["spreadsheet", fileId],
-      });
-    },
-  });
+        const a = document.createElement("a");
 
-  const deleteRows = useMutation({
-    mutationFn: async () => {
-      if (!selectedRows.length) return;
+        a.href = url;
+        a.download = "spreadsheet.csv";
+        a.click();
 
-      const { error } = await supabase
-        .from("candidates")
-        .delete()
-        .in("id", selectedRows);
+        URL.revokeObjectURL(url);
+    }
 
-      if (error) throw error;
-    },
+    return {
+        rows,
+filteredRows,
+        allRows: rows,
+        setRows,
 
-    onSuccess() {
-      setSelectedRows([]);
+        columns,
 
-      queryClient.invalidateQueries({
-        queryKey: ["spreadsheet", fileId],
-      });
-    },
-  });
-function exportCSV() {
-  const headers = [
-    "Name",
-    "Email",
-    "Phone",
-    "Status",
-    "Location",
-  ];
+        isLoading,
+        error,
+        refetch,
 
-  const csv = [
-    headers,
-    ...filteredRows.map((r) => [
-      r.full_name ?? "",
-      r.email ?? "",
-      r.phone ?? "",
-      r.status ?? "",
-      r.location ?? "",
-    ]),
-  ]
-    .map((r) => r.join(","))
-    .join("\n");
+        search,
+        setSearch,
 
-  const blob = new Blob([csv], {
-    type: "text/csv",
-  });
+        saving,
 
-  const url = URL.createObjectURL(blob);
+        updateCell,
 
-  const a = document.createElement("a");
+        selectedRows,
+        setSelectedRows,
 
-  a.href = url;
-  a.download = `${fileId}.csv`;
-  a.click();
+        addRow,
+        deleteRows,
 
-  URL.revokeObjectURL(url);
-}
-  return {
-    rows: filteredRows,
-    isLoading,
-    error,
-    refetch,
+        exportCSV,
 
-    search,
-    setSearch,
-
-    selectedRows,
-    setSelectedRows,
-
-    saving,
-
-    sort,
-    updateCell,
-
-    addRow,
-    deleteRows,
-  };
+        saveSpreadsheet,
+    };
 }

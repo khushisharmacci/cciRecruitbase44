@@ -319,15 +319,15 @@ const handleCreateFolder = async (name) => {
 
       {/* Upload Wizard Dialog */}
       <Dialog open={showUpload} onOpenChange={setShowUpload}>
-       {/*  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <UploadWizard
-            folders={folders}
-            onDone={handleUploadDone}
-            onCreateFolder={handleCreateFolder}
-            queryClient={queryClient} />
-          
-        </DialogContent> */}
-      </Dialog>
+  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <UploadWizard
+      folders={folders}
+      onDone={handleUploadDone}
+      onCreateFolder={handleCreateFolder}
+      queryClient={queryClient}
+    />
+  </DialogContent>
+</Dialog>
     </>);
 
 }

@@ -49,7 +49,7 @@ export default function SpreadsheetToolbar({
             <Input
               value={search}
               onChange={(e)=>setSearch(e.target.value)}
-              placeholder="Search candidates..."
+              placeholder="Search spreadsheet..."
               className="
                 pl-10
                 w-72
@@ -81,7 +81,7 @@ export default function SpreadsheetToolbar({
 
           <span className="text-sm text-slate-400">
 
-            {rows.length} Candidates
+            {rows.length} Rows
 
           </span>
 
@@ -101,7 +101,7 @@ export default function SpreadsheetToolbar({
 
             <Plus className="mr-2 h-4 w-4"/>
 
-            Add Candidate
+            Add Row
 
           </Button>
 
@@ -117,7 +117,7 @@ export default function SpreadsheetToolbar({
 
                 window.confirm(
 
-                  `Delete ${selectedRows.length} selected candidates?`
+                  `Delete ${selectedRows.length} selected rows?`
 
                 )
 

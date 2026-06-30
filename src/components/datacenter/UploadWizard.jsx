@@ -86,28 +86,71 @@ function parseFile(file) {
       reader.readAsText(file);
     } else {
       reader.onload = (e) => {
-        const workbook = XLSX.read(e.target.result, { type: "array", cellDates: true });
-        const sheets = workbook.SheetNames;
-        const sheetName = sheets[0];
-        const ws = workbook.Sheets[sheetName];
-        const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+        const workbook = XLSX.read(e.target.result, {
+    type: "array",
+    cellDates: true,
+});
 
-        if (raw.length === 0) { resolve({ headers: [], rows: [], sheets }); return; }
+const workbookSheets = [];
 
-        const hdrs = raw[0].map((h) => String(h ?? "").trim()).filter((h) => h !== "");
-        const rows = raw.slice(1)
-          .filter((row) => row.some((cell) => cell !== "" && cell != null))
-          .map((row) => {
+for (const sheetName of workbook.SheetNames) {
+    const ws = workbook.Sheets[sheetName];
+
+    const raw = XLSX.utils.sheet_to_json(ws, {
+        header: 1,
+        defval: "",
+    });
+
+    if (raw.length === 0) {
+        workbookSheets.push({
+            name: sheetName,
+            columns: [],
+            rows: [],
+        });
+        continue;
+    }
+
+    const columns = raw[0]
+        .map((h) => String(h ?? "").trim())
+        .filter(Boolean);
+
+    const rows = raw
+        .slice(1)
+        .filter((r) => r.some((c) => c !== "" && c != null))
+        .map((r) => {
             const obj = {};
-            hdrs.forEach((h, i) => {
-              const val = row[i];
-              if (val instanceof Date) obj[h] = val.toISOString().split("T")[0];
-              else obj[h] = val != null ? String(val) : "";
-            });
-            return obj;
-          });
 
-        resolve({ headers: hdrs, rows, sheets });
+            columns.forEach((column, index) => {
+                const value = r[index];
+
+                obj[column] =
+                    value instanceof Date
+                        ? value.toISOString().split("T")[0]
+                        : value != null
+                        ? String(value)
+                        : "";
+            });
+
+            return obj;
+        });
+
+    workbookSheets.push({
+        name: sheetName,
+        columns,
+        rows,
+    });
+}
+
+
+        resolve({
+    headers:
+        workbookSheets[0]?.columns ?? [],
+
+    rows:
+        workbookSheets[0]?.rows ?? [],
+
+    sheets: workbookSheets,
+});
       };
       reader.readAsArrayBuffer(file);
     }
@@ -273,10 +316,17 @@ const tableName = tableMap[entity];
       folder_id: selectedFolder?.id || null,
       folder_name: selectedFolder?.name || null,
       entity_type: entity,
-      row_count: allRows.length,
+      row_count: sheets.reduce(
+    (sum, sheet) => sum + sheet.rows.length,
+    0
+),
       column_count: headers.length,
-      columns: headers,
-      rows_data: allRows.slice(0, 10000),
+
+columns: headers,
+
+rows_data: allRows.slice(0, 10000),
+
+worksheets: sheets,
       sync_status: failed === 0 ? "synced" : "error",
       imported_count: success,
       size_bytes: file.size || 0,
@@ -410,7 +460,10 @@ console.log("DATA FILE ERROR", error);
       {file && sheets.length > 1 && (
         <div className="flex items-center gap-2 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-sm text-blue-300">
           <Table2 className="h-4 w-4 shrink-0" />
-          This file has {sheets.length} sheets. Currently reading: <strong className="text-foreground">{sheets[0]}</strong>
+          This file has {sheets.length} sheets. Currently reading:
+<strong className="text-foreground">
+    {sheets[0].name}
+</strong>
         </div>
       )}
 
