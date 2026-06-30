@@ -1,5 +1,5 @@
+import { useState } from "react";
 import { AgGridReact } from "ag-grid-react";
-
 import {
     ModuleRegistry,
     AllCommunityModule,
@@ -23,6 +23,9 @@ export default function SpreadsheetViewer({
 }) {
 
     const spreadsheet = useSpreadsheet(file.id);
+    
+
+const [activeSheet, setActiveSheet] = useState(0);
     console.log(spreadsheet.columns);
     console.log(spreadsheet.rows[0]);
 
@@ -92,15 +95,7 @@ export default function SpreadsheetViewer({
                     exportCSV={spreadsheet.exportCSV}
                 />
 
-                <div className="flex-1">
-
-                    <div
-    className="flex-1"
-    style={{
-        minHeight: 0,
-        height: "100%",
-    }}
->
+                <div className="flex-1 pb-12">
     <div
     className="ag-theme-quartz-dark flex-1"
     style={{
@@ -109,6 +104,10 @@ export default function SpreadsheetViewer({
     }}
 >
     <AgGridReact
+    enableCellTextSelection={true}
+    ensureDomOrder={true}
+    suppressClipboardPaste={false}
+    copyHeadersToClipboard={false}
     rowData={
     spreadsheet.search
         ? spreadsheet.filteredRows
@@ -149,11 +148,35 @@ enterNavigatesVerticallyAfterEdit={true}
 }}
 />
 </div>
+<div className="h-12 border-t border-slate-700 bg-[#1b2940] flex items-center px-2 gap-2">
+
+    <Button variant="secondary">
+        Sheet1
+    </Button>
+
+    <Button
+    variant="outline"
+    onClick={() => {
+        const newSheet = {
+            id: crypto.randomUUID(),
+            name: `Sheet${sheets.length + 1}`,
+            columns: [...currentSheet.columns],
+            rows: [],
+        };
+
+        setSheets([...sheets, newSheet]);
+        setActiveSheet(sheets.length);
+    }}
+>
+    +
+</Button>
+
+</div>
 </div>
                 </div>
 
             </div>
 
-        </div>
+        
     );
 }
