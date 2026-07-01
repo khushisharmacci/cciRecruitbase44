@@ -84,7 +84,7 @@ export default function ReportEditor({
                   <Save className="mr-1 h-4 w-4" />
                 )}
 
-                {existingReport ? "Update" : "Save"}
+                {existingReport ? "Update" : "Submit"}
               </Button>
             </div>
           )}

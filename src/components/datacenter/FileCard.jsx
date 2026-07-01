@@ -1,4 +1,22 @@
-import { FileSpreadsheet, Eye, Trash2, CheckCircle, AlertCircle, Clock } from "lucide-react";
+import {
+  FileSpreadsheet,
+  Eye,
+  Trash2,
+  MoreVertical,
+  Pencil,
+  RefreshCw,
+  Download,
+  CheckCircle,
+  AlertCircle,
+  Clock,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -9,7 +27,14 @@ const SYNC_BADGE = {
   error: { icon: AlertCircle, label: "Error", cls: "bg-red-500/15 text-red-300" },
 };
 
-export default function FileCard({ file, onOpen, onDelete }) {
+export default function FileCard({
+  file,
+  onOpen,
+  onDelete,
+  onEditMapping,
+  onReimport,
+  onDownload,
+}) {
   const badge = SYNC_BADGE[file.sync_status] || SYNC_BADGE.synced;
   const SyncIcon = badge.icon;
 console.log(file);
@@ -35,14 +60,59 @@ console.log(file);
         <span className="text-xs text-muted-foreground">
           {file.created_at ? format(new Date(file.created_at), "MMM d, yyyy") : ""}
         </span>
-        <div className="flex gap-1 opacity-100">
-          <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => onOpen(file)}>
-            <Eye className="h-3.5 w-3.5" />
-          </Button>
-          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => onDelete(file)}>
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+        <div className="flex items-center gap-1">
+
+  <Button
+    size="sm"
+    variant="ghost"
+    className="h-7 w-7 p-0"
+    onClick={() => onOpen(file)}
+  >
+    <Eye className="h-3.5 w-3.5" />
+  </Button>
+
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-7 w-7 p-0"
+      >
+        <MoreVertical className="h-3.5 w-3.5" />
+      </Button>
+    </DropdownMenuTrigger>
+
+    <DropdownMenuContent align="end" className="w-52">
+
+      <DropdownMenuItem onClick={() => onEditMapping?.(file)}>
+        <Pencil className="mr-2 h-4 w-4" />
+        Edit Mapping
+      </DropdownMenuItem>
+
+      <DropdownMenuItem onClick={() => onReimport?.(file)}>
+        <RefreshCw className="mr-2 h-4 w-4" />
+        Re-import Data
+      </DropdownMenuItem>
+
+      <DropdownMenuItem onClick={() => onDownload?.(file)}>
+        <Download className="mr-2 h-4 w-4" />
+        Download Original
+      </DropdownMenuItem>
+
+      <DropdownMenuSeparator />
+
+      <DropdownMenuItem
+        onClick={() => onDelete(file)}
+        className="text-destructive focus:text-destructive"
+      >
+        <Trash2 className="mr-2 h-4 w-4" />
+        Delete File
+      </DropdownMenuItem>
+
+    </DropdownMenuContent>
+  </DropdownMenu>
+
+</div>
       </div>
     </div>
   );

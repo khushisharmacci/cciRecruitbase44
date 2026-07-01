@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import useDuplicateCheck from "@/hooks/useDuplicateCheck";
+import DuplicateWarningCard from "@/components/duplicate/DuplicateWarningCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -49,7 +51,11 @@ export default function CandidateDialog({
 
   notes: ""
 });
-
+const duplicate = useDuplicateCheck(
+  "candidates",
+  form,
+  candidate?.id
+);
   useEffect(() => {
     if (candidate) {
       setForm({
@@ -156,6 +162,20 @@ export default function CandidateDialog({
           <DialogTitle>{candidate ? "Edit Candidate" : "Add Candidate"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {duplicate.exactMatch && (
+  <DuplicateWarningCard
+    type="exact"
+    candidate={duplicate.exactMatch}
+  />
+)}
+
+{!duplicate.exactMatch &&
+  duplicate.possibleMatches.length > 0 && (
+    <DuplicateWarningCard
+      type="possible"
+      candidate={duplicate.possibleMatches[0]}
+    />
+)}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Full Name *</Label>
@@ -300,7 +320,7 @@ export default function CandidateDialog({
 
   <Input
     type="date"
-    value={form.c_date}
+    value={form.candidate_date}
     onChange={(e) =>
       setForm({
         ...form,

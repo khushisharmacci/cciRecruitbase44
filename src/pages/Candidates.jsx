@@ -28,24 +28,26 @@ export default function Candidates() {
   const { tenantFilter, stampRecord, companyId } = useTenant();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [fileFilter, setFileFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editCandidate, setEditCandidate] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [selectedCandidates, setSelectedCandidates] = useState([]);
 
   const { data: candidates = [], isLoading } = useQuery({
-    queryKey: ["candidates", companyId],
-    queryFn: async () => {
-  const { data, error } = await supabase
-    .from("candidates")
-    .select("*")
-    .order("created_at", { ascending: false });
+  queryKey: ["candidates", companyId],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("candidates")
+      .select("*")
+      .eq("company_id", companyId)
+      .order("created_at", { ascending: false });
 
-  if (error) throw error;
+    if (error) throw error;
 
-  return data || [];
-}
-  });
+    return data || [];
+  },
+});
 
   const { data: files = [] } = useQuery({
   queryKey: ["candidate-files", companyId],
@@ -54,15 +56,12 @@ export default function Candidates() {
     .from("data_files")
     .select("*");
 
-  console.log("DATA FILES:", data);
-  console.log("ERROR:", error);
 
   if (error) throw error;
 
   return data || [];
 },
 });
-console.log("Candidate files:", files);
   const createMutation = useMutation({
   mutationFn: async (data) => {
     console.log("SAVING CANDIDATE:", data);
@@ -119,16 +118,24 @@ console.log("Candidate files:", files);
   });
 useEffect(() => {
   setSelectedCandidates([]);
-}, [search, statusFilter]);
+}, [search, statusFilter, fileFilter]);
   const filtered = candidates.filter((c) => {
-    const matchSearch =
-  !search ||
-  c.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-  c.email?.toLowerCase().includes(search.toLowerCase()) ||
-  c.linkedin?.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "all" || c.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  const matchSearch =
+    !search ||
+    c.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+    c.email?.toLowerCase().includes(search.toLowerCase()) ||
+    c.linkedin?.toLowerCase().includes(search.toLowerCase());
+
+  const matchStatus =
+    statusFilter === "all" ||
+    c.status === statusFilter;
+
+  const matchFile =
+    fileFilter === "all" ||
+    c.data_file_id === fileFilter;
+
+  return matchSearch && matchStatus && matchFile;
+});
 
   const handleDeleteSelected = async () => {
   if (
@@ -158,6 +165,7 @@ const handleSave = (data) => {
   if (editCandidate) {
     updateMutation.mutate({ id: editCandidate.id, data });
   } else {
+    console.log("DATA BEING SAVED:", data);
     createMutation.mutate(data);
   }
 };
@@ -194,6 +202,29 @@ const handleSave = (data) => {
           <Input placeholder="Search by name, email or LinkedIn..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select
+  value={fileFilter}
+  onValueChange={setFileFilter}
+>
+  <SelectTrigger className="w-72">
+    <SelectValue placeholder="All Files" />
+  </SelectTrigger>
+
+  <SelectContent>
+    <SelectItem value="all">
+      All Files
+    </SelectItem>
+
+    {files.map((file) => (
+      <SelectItem
+        key={file.id}
+        value={file.id}
+      >
+        {file.original_filename}
+      </SelectItem>
+    ))}
+  </SelectContent>
+</Select>
           <SelectTrigger className="w-48"><SelectValue placeholder="Filter by status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>

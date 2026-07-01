@@ -30,6 +30,7 @@ export default function DataCenter() {
   const [openFile, setOpenFile] = useState(null);
   const [showUpload, setShowUpload] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [editingFile, setEditingFile] = useState(null);
   
 const { data: folders = [], isLoading: loadingFolders } = useQuery({
   queryKey: ["data-folders", companyId],
@@ -119,21 +120,75 @@ const handleCreateFolder = async (name) => {
   toast.success(`Folder "${name}" created`);
 };
 
+const handleEditMapping = (file) => {
+  setEditingFile(file);
+  setShowUpload(true);
+};
+
+const handleReimport = (file) => {
+  console.log("Re-import:", file);
+};
+
+const handleDownload = (file) => {
+  console.log("Download:", file);
+};
+
   const handleDeleteFile = async (file) => {
-    setDeletingId(file.id);
-    await supabase
-  .from("data_files")
-  .delete()
-  .eq("id", file.id);
-    queryClient.invalidateQueries({ queryKey: ["data-files"] });
-    toast.success(`"${file.name}" deleted`);
+  const confirmed = window.confirm(
+    `Delete "${file.name}"?\n\nThis will also delete all candidates imported from this file. This action cannot be undone.`
+  );
+
+  if (!confirmed) return;
+
+  setDeletingId(file.id);
+
+  try {
+    // 1. Delete imported candidates
+    const { error: candidateError } = await supabase
+      .from("candidates")
+      .delete()
+      .eq("data_file_id", file.id);
+
+    if (candidateError) throw candidateError;
+
+    // 2. Delete the uploaded file record
+    const { error: fileError } = await supabase
+      .from("data_files")
+      .delete()
+      .eq("id", file.id);
+
+    if (fileError) throw fileError;
+
+    // 3. Delete the original Excel from Storage (if it exists)
+    if (file.storage_path) {
+      const { error: storageError } = await supabase.storage
+        .from("data-files") // <-- change if your bucket has a different name
+        .remove([file.storage_path]);
+
+      if (storageError) {
+        console.warn("Storage delete failed:", storageError);
+      }
+    }
+
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["data-files"] }),
+      queryClient.invalidateQueries({ queryKey: ["candidates"] }),
+    ]);
+
+    toast.success("File and imported candidates deleted successfully.");
+  } catch (err) {
+    console.error(err);
+    toast.error(err.message);
+  } finally {
     setDeletingId(null);
-  };
+  }
+};
 
   const handleUploadDone = () => {
-    setShowUpload(false);
-    queryClient.invalidateQueries({ queryKey: ["data-files"] });
-  };
+  setEditingFile(null);
+  setShowUpload(false);
+  queryClient.invalidateQueries({ queryKey: ["data-files"] });
+};
 
   // Filter files
   const visibleFiles = files.filter((f) => {
@@ -171,9 +226,14 @@ const handleCreateFolder = async (name) => {
             <h1 className="text-2xl font-bold text-foreground">Data Center</h1>
             <p className="text-muted-foreground text-sm mt-0.5">Upload spreadsheets, view data, sync across the platform</p>
           </div>
-          <Button className="gap-2" onClick={() => setShowUpload(true)}>
-            <Upload className="h-4 w-4" /> Upload File
-          </Button>
+          <Button
+  onClick={() => {
+    setEditingFile(null);
+    setShowUpload(true);
+  }}
+>
+  Upload File
+</Button>
           {!canEdit && (
             <span className="text-xs text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-full">View Only</span>
           )}
@@ -251,10 +311,14 @@ const handleCreateFolder = async (name) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {visibleFiles.map((file) =>
               <FileCard
-                key={file.id}
-                file={file}
-                onOpen={setOpenFile}
-                onDelete={canEdit ? handleDeleteFile : null} />
+  key={file.id}
+  file={file}
+  onOpen={setOpenFile}
+  onDelete={canEdit ? handleDeleteFile : null}
+  onEditMapping={handleEditMapping}
+  onReimport={handleReimport}
+  onDownload={handleDownload}
+/>
 
               )}
               </div> :
@@ -318,16 +382,26 @@ const handleCreateFolder = async (name) => {
       </div>
 
       {/* Upload Wizard Dialog */}
-      <Dialog open={showUpload} onOpenChange={setShowUpload}>
+      <Dialog
+  open={showUpload}
+  onOpenChange={(open) => {
+    setShowUpload(open);
+
+    if (!open) {
+      setEditingFile(null);
+    }
+  }}
+>
   <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
     <UploadWizard
-      folders={folders}
-      onDone={handleUploadDone}
-      onCreateFolder={handleCreateFolder}
-      queryClient={queryClient}
-    />
+  folders={folders}
+  onDone={handleUploadDone}
+  onCreateFolder={handleCreateFolder}
+  queryClient={queryClient}
+  editingFile={editingFile}
+/>
   </DialogContent>
-</Dialog>
+</Dialog> 
     </>);
 
 }

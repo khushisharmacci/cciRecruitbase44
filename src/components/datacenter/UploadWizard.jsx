@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import * as XLSX from "xlsx";
 import Papa from "papaparse";
 import { supabase } from "@/lib/supabase";
@@ -19,10 +19,52 @@ import ColumnMapper from "@/components/datacenter/ColumnMapper";
 // ─── Entity Field Definitions ─────────────────────────────────────────────────
 const ENTITY_FIELDS = {
   Candidate: {
-    required: ["full_name", "email"],
-    optional: ["phone", "skills", "experience_years", "current_company", "current_job_role", "expected_ctc", "location", "source", "position", "notes"],
-    labels: { full_name: "Full Name", email: "Email", phone: "Phone", skills: "Skills", experience_years: "Experience (Yrs)", current_company: "Current Company", current_job_role: "Current Role", expected_ctc: "Expected CTC", location: "Location", source: "Source", position: "Position", notes: "Notes" },
-    defaults: { status: "Applied" }
+  required: [
+    "full_name",
+    "email",
+    "phone",
+  ],
+
+  optional: [
+    "row_order",
+    "experience_years",
+    "current_company",
+    "current_ctc",
+    "expected_ctc",
+    "location",
+    "academics",
+    "source",
+    "sourced_by",
+    "hr",
+    "linkedin",
+    "sent_on",
+    "position",
+    "remarks",
+  ],
+
+  labels: {
+    row_order: "SR.NO.",
+    full_name: "Candidate Name",
+    email: "Email ID",
+    phone: "Contact Number",
+    experience_years: "Experience (Yrs)",
+    current_company: "Current Org",
+    current_ctc: "Current CTC",
+    expected_ctc: "Expected CTC",
+    location: "Location",
+    academics: "Academics",
+    source: "Source",
+    sourced_by: "Sourced By",
+    hr: "HR",
+    linkedin: "LinkedIn Profile Link",
+    sent_on: "Sent On",
+    position: "Position",
+    remarks: "Remarks",
+  },
+
+  defaults: {
+    status: "Applied",
+  },
   },
   Client: {
     required: ["name"],
@@ -56,7 +98,7 @@ const ENTITY_FIELDS = {
   }
 };
 
-const NUMERIC_FIELDS = ["experience_years", "expected_s", "salary_min", "salary_max", "experience_min", "experience_max", "openings", "amount", "value"];
+const NUMERIC_FIELDS = ["row_order", "experience_years", "expected_s", "salary_min", "salary_max", "experience_min", "experience_max", "openings", "amount", "value"];
 
 // ─── File Parsing (client-side) ──────────────────────────────────────────────
 function parseFile(file) {
@@ -191,7 +233,13 @@ function StepBar({ current }) {
 }
 
 // ─── Main Wizard ─────────────────────────────────────────────────────────────
-export default function UploadWizard({ folders, onDone, onCreateFolder, queryClient }) {
+export default function UploadWizard({
+  folders,
+  onDone,
+  onCreateFolder,
+  queryClient,
+  editingFile,
+}) {
   const { stampRecord, companyId } = useTenant();
   const [step, setStep] = useState("folder");
   const [selectedFolder, setSelectedFolder] = useState(null);
@@ -212,6 +260,7 @@ export default function UploadWizard({ folders, onDone, onCreateFolder, queryCli
   const [importResult, setImportResult] = useState(null);
 
   const entityDef = ENTITY_FIELDS[entity];
+  
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
@@ -243,109 +292,189 @@ export default function UploadWizard({ folders, onDone, onCreateFolder, queryCli
     setParsing(false);
   }, []);
 
-  const handleImport = async () => {
-    setImporting(true);
-    try {
-      const tableMap = {
+ 
+
+//==================================================================================
+const handleImport = async () => {
+  console.log("=== HANDLE IMPORT STARTED ===");
+let success = 0;
+let failed = 0;
+  setImporting(true);
+
+  if (!file) {
+    toast.error("No file selected.");
+    setImporting(false);
+    return;
+  }
+const tableMap = {
   Candidate: "candidates",
   Client: "clients",
   Lead: "leads",
   Position: "positions",
   RevenueRecord: "revenue_records",
-  TeamGroup: "team_groups"
+  TeamGroup: "team_groups",
 };
 
 const tableName = tableMap[entity];
-      let success = 0, failed = 0;
-      const BATCH = 50;
 
-      for (let i = 0; i < allRows.length; i += BATCH) {
-        const batch = allRows.slice(i, i + BATCH);
-        await Promise.all(batch.map(async (row) => {
-          const record = { ...entityDef.defaults };
+if (!tableName) {
+  toast.error(`Unknown entity: ${entity}`);
+  setImporting(false);
+  return;
+}
+  try {
+    // Save uploaded spreadsheet metadata
+
+    const { data: dataFile, error: fileError } = await supabase
+      .from("data_files")
+      .insert([
+        {
+          company_id: companyId,
+          name: file.name.replace(/\.[^/.]+$/, ""),
+          original_filename: file.name,
+          folder_id: selectedFolder?.id ?? null,
+          folder_name: selectedFolder?.name ?? null,
+          entity_type: entity,
+          row_count: allRows.length,
+          column_count: headers.length,
+          columns: headers,
+          rows_data: allRows.slice(0, 10000),
+          worksheets: sheets,
+          imported_count: 0,
+          sync_status: "processing",
+          size_bytes: file.size ?? 0,
+        },
+      ])
+      .select()
+      .single();
+
+    if (fileError) throw fileError;
+
+    const dataFileId = dataFile.id;
+
+    const BATCH_SIZE = 50;
+
+    for (let i = 0; i < allRows.length; i += BATCH_SIZE) {
+      const batch = allRows.slice(i, i + BATCH_SIZE);
+
+      await Promise.all(
+        batch.map(async (row) => {
+          const record = {
+            ...entityDef.defaults,
+          };
+
           const customData = {};
 
           Object.entries(mappings).forEach(([header, field]) => {
-            if (!field || row[header] === undefined || row[header] === "") return;
-            const val = row[header];
-            const converted = NUMERIC_FIELDS.includes(field) ? parseFloat(val) || undefined : val;
+            if (!field) return;
 
-            // Check if this is a custom field
-            if (customFields.find(cf => cf.key === field)) {
+            if (row[header] === undefined) return;
+
+            if (row[header] === "") return;
+
+            const value = row[header];
+
+            let converted = value;
+
+if (NUMERIC_FIELDS.includes(field)) {
+  const cleaned = String(value).replace(/[^0-9.]/g, "");
+  converted = cleaned ? Number(cleaned) : null;
+}
+// Convert DD-MM-YYYY or DD/MM/YYYY to YYYY-MM-DD
+if (field === "sent_on" && value) {
+  const str = String(value).trim();
+
+  if (/^\d{2}[-/]\d{2}[-/]\d{4}$/.test(str)) {
+    const [day, month, year] = str.split(/[-/]/);
+    converted = `${year}-${month}-${day}`;
+  }
+}
+            if (customFields.find((cf) => cf.key === field)) {
               customData[field] = converted;
             } else {
               record[field] = converted;
             }
           });
 
-          // Store custom fields as notes JSON for entities that have notes
-          if (Object.keys(customData).length > 0 && entityDef.optional.includes("notes")) {
-            record.notes = record.notes
-              ? record.notes + "\n\nCustom Fields: " + JSON.stringify(customData, null, 2)
-              : "Custom Fields: " + JSON.stringify(customData, null, 2);
+          if (
+  Object.keys(customData).length &&
+  entityDef.optional.includes("remarks")
+) {
+  record.remarks = record.remarks
+    ? record.remarks +
+      "\n\nCustom Fields:\n" +
+      JSON.stringify(customData, null, 2)
+    : "Custom Fields:\n" +
+      JSON.stringify(customData, null, 2);
+}
+
+          record.company_id = companyId;
+                    if (entity === "Candidate") {
+            record.data_file_id = dataFileId;
           }
 
           try {
-  const { error } = await supabase
-    .from(tableName)
-    .insert([
-      {
-        ...record,
-        company_id: companyId,
-      },
-    ]);
-
-  if (error) throw error;
-
-  success++;
-} catch (err) {
-  console.error(err);
-  failed++;
-}
-        }));
-      }
-
-      // Save DataFile record
-      const { data, error } = await supabase
-  .from("data_files")
-  .insert([
-    {
-      company_id: companyId,
-      name: file.name.replace(/\.[^/.]+$/, ""),
-      original_filename: file.name,
-      folder_id: selectedFolder?.id || null,
-      folder_name: selectedFolder?.name || null,
-      entity_type: entity,
-      row_count: sheets.reduce(
-    (sum, sheet) => sum + sheet.rows.length,
-    0
-),
-      column_count: headers.length,
-
-columns: headers,
-
-rows_data: allRows.slice(0, 10000),
-
-worksheets: sheets,
-      sync_status: failed === 0 ? "synced" : "error",
-      imported_count: success,
-      size_bytes: file.size || 0,
-    },
-  ])
+            const { data, error } = await supabase
+  .from(tableName)
+  .insert([record])
   .select();
 
-console.log("DATA FILE INSERT", data);
-console.log("DATA FILE ERROR", error);
+console.log("INSERT RECORD", record);
 
-      queryClient.invalidateQueries();
-      setImportResult({ success, failed, total: allRows.length });
-      setStep("done");
-      toast.success(`${success.toLocaleString()} records imported!`);
-    } catch (err) {
-      toast.error("Import failed. Please try again.");
+if (error) {
+  console.error("SUPABASE INSERT ERROR:", error);
+  throw error;
+}
+
+            success++;
+          } catch (err) {
+  console.error("=================================");
+  console.error("IMPORT FAILED");
+  console.error("Row Number:", i + batch.indexOf(row) + 2);
+  console.table(record);
+  console.table(row);
+  console.error(err);
+  console.error("=================================");
+
+  failed++;
+}
+        })
+      );
     }
-    setImporting(false);
-  };
+
+    const { error: updateError } = await supabase
+      .from("data_files")
+      .update({
+        imported_count: success,
+        sync_status: failed === 0 ? "synced" : "error",
+      })
+      .eq("id", dataFileId);
+
+    if (updateError) {
+      console.error(updateError);
+    }
+
+    queryClient.invalidateQueries();
+
+    setImportResult({
+      success,
+      failed,
+      total: allRows.length,
+    });
+
+    setStep("done");
+
+    toast.success(
+      `${success.toLocaleString()} records imported successfully!`
+    );
+  } catch (err) {
+    console.error("IMPORT FAILED:", err);
+
+    toast.error(err.message || "Import failed.");
+  }
+
+  setImporting(false);
+};
 
   const handleMappingContinue = (finalMappings, finalCustomFields) => {
     setMappings(finalMappings);
@@ -549,7 +678,10 @@ console.log("DATA FILE ERROR", error);
 
         <div className="flex gap-3">
           <Button variant="outline" className="gap-2" onClick={() => setStep("mapping")}><RefreshCw className="h-4 w-4" /> Adjust Mapping</Button>
-          <Button className="flex-1 gap-2" onClick={handleImport} disabled={importing}>
+          <Button className="flex-1 gap-2" onClick={() => {
+  console.log("IMPORT BUTTON CLICKED");
+  handleImport();
+}} disabled={importing}>
             {importing ? (
               <><Loader2 className="h-4 w-4 animate-spin" /> Importing {allRows.length.toLocaleString()} rows...</>
             ) : (
