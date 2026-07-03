@@ -1,6 +1,5 @@
 import { supabase } from "@/lib/supabase";
 import { Link, useLocation } from "react-router-dom";
-import DailyReport from "@/pages/DailyReport";
 import { useAuth } from "@/lib/AuthContext";
 import {
   LayoutDashboard,
@@ -26,6 +25,8 @@ import {
   CalendarCheck,
   MessageSquare,
   ClipboardList,
+  CalendarClock,
+  Network,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { can, ROLE_LABELS } from "@/lib/roles";
@@ -38,7 +39,7 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
   queryFn: async () => {
     const { data, error } = await supabase
       .from("notifications")
-      .select("*")
+      .select("id")
       .eq("read", false);
 
     if (error) throw error;
@@ -50,8 +51,6 @@ export default function Sidebar({ collapsed, setCollapsed, mobileOpen, setMobile
 
 const unreadCount = notifications.length;
 
-  console.log("SIDEBAR USER:", user);
-console.log("SIDEBAR ROLE:", user?.role);
 
 const role = user?.role || "recruiter";
   
@@ -78,7 +77,27 @@ const role = user?.role || "recruiter";
     if (can.viewTeams(user)) items.push({ path: "/teams", label: "Teams", icon: UsersRound });
     if (can.viewTargets(user)) items.push({ path: "/targets", label: "Targets", icon: Target });
     if (can.viewRevenue(user)) items.push({ path: "/revenue", label: "Revenue", icon: IndianRupee });
-    if (can.viewAttendance(user)) items.push({ path: "/attendance", label: "Attendance", icon: Clock });
+    if (can.viewAttendance(user))
+  items.push({
+    path: "/attendance",
+    label: "Attendance",
+    icon: Clock,
+  });
+
+if (can.viewRecruitment(user)) {
+  items.push({
+    path: "/interviews",
+    label: "Interviews",
+    icon: CalendarClock,
+  });
+
+  items.push({
+    path: "/positions",
+    label: "Positions",
+    icon: Network,
+  });
+}
+
 items.push({
   path: "/daily-report",
   label: "Daily Report",
@@ -126,12 +145,17 @@ items.push({
 
   // Role badge color
   const roleBadgeColor = {
-    ceo: "bg-amber-500/20 text-amber-300",
-    admin: "bg-blue-500/20 text-blue-300",
-    team_lead: "bg-cyan-500/20 text-cyan-300",
-    recruiter: "bg-emerald-500/20 text-emerald-300",
-    employee: "bg-slate-500/20 text-slate-300",
-  }[role] || "bg-slate-500/20 text-slate-300";
+  ceo: "bg-amber-500/20 text-amber-300",
+  super_admin: "bg-purple-500/20 text-purple-300",
+  company_admin: "bg-blue-500/20 text-blue-300",
+  admin: "bg-blue-500/20 text-blue-300",
+  hr_manager: "bg-cyan-500/20 text-cyan-300",
+  team_lead: "bg-cyan-500/20 text-cyan-300",
+  recruiter: "bg-emerald-500/20 text-emerald-300",
+  team_member: "bg-slate-500/20 text-slate-300",
+  employee: "bg-slate-500/20 text-slate-300",
+  viewer: "bg-gray-500/20 text-gray-300",
+}[role] || "bg-slate-500/20 text-slate-300";
 
   const sidebarContent = (
     <div className="flex flex-col h-full">

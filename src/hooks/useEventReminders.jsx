@@ -24,18 +24,33 @@ export function useEventReminders() {
   });
 
   const { data: existingNotifications = [] } = useQuery({
-    queryKey: ["event-notifications"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("notifications")
-        .select("event_id")
-        .eq("type", "Event");
+  queryKey: ["event-notifications"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("event_id");
 
-      if (error) throw error;
-      return data || [];
-    },
-    refetchInterval: 60000,
-  });
+    if (error) throw error;
+
+    return data || [];
+  },
+  refetchInterval: 60000,
+});
+
+  const { data: interviews = [] } = useQuery({
+  queryKey: ["interview-reminders"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("interviews")
+      .select("*")
+      .eq("status", "Scheduled");
+
+    if (error) throw error;
+
+    return data || [];
+  },
+  refetchInterval: 60000,
+});
 
   useEffect(() => {
     const checkReminders = async () => {
@@ -96,24 +111,9 @@ export function useEventReminders() {
               ]);
 
             if (error) {
-  console.error(
-    "Notification creation failed:",
-    error
-  );
-  continue;
-}
-
-await Promise.all([
-  qc.invalidateQueries({
-    queryKey: ["notifications"],
-  }),
-  qc.invalidateQueries({
-    queryKey: ["sidebar-notifications"],
-  }),
-  qc.invalidateQueries({
-    queryKey: ["event-notifications"],
-  }),
-]);
+              console.error("Notification creation failed:", error);
+              continue;
+            }
 
             await Promise.all([
               qc.invalidateQueries({
@@ -135,6 +135,82 @@ await Promise.all([
       checkReminders();
     }
   }, [events, existingNotifications, qc]);
+
+  useEffect(() => {
+  const checkInterviewReminders = async () => {
+    const now = new Date();
+
+    for (const interview of interviews) {
+      if (!interview.interview_date) continue;
+
+      const offset = interview.reminder_minutes || 0;
+
+      if (offset === 0) continue;
+
+      const interviewTime = new Date(
+        `${interview.interview_date}T${interview.interview_time || "00:00"}`
+      );
+
+      const minutesUntil =
+        (interviewTime - now) / 60000;
+
+      const notificationKey = `interview_${interview.id}_${offset}`;
+
+      if (checkedRef.current.has(notificationKey))
+        continue;
+
+      if (
+        minutesUntil <= offset &&
+        minutesUntil > 0
+      ) {
+        const alreadyExists =
+          existingNotifications.some(
+            (n) => n.event_id === notificationKey
+          );
+
+        if (alreadyExists) {
+          checkedRef.current.add(notificationKey);
+          continue;
+        }
+
+        checkedRef.current.add(notificationKey);
+
+        const { error } = await supabase
+          .from("notifications")
+          .insert([
+            {
+              title: `Interview Reminder: ${interview.candidate_name}`,
+              message: `Starting in ~${Math.round(
+                minutesUntil
+              )} min • ${(interview.company_name || "")} ${(interview.position_title || "")}`.trim(),
+              type: "Interview",
+              read: false,
+              link: "/interviews",
+              event_id: notificationKey,
+              user_id: interview.user_id || null,
+              company_id: interview.company_id || null,
+              created_at: new Date().toISOString(),
+            },
+          ]);
+
+        if (!error) {
+          await Promise.all([
+            qc.invalidateQueries({
+              queryKey: ["notifications"],
+            }),
+            qc.invalidateQueries({
+              queryKey: ["sidebar-notifications"],
+            }),
+          ]);
+        }
+      }
+    }
+  };
+
+  if (interviews.length) {
+    checkInterviewReminders();
+  }
+}, [interviews, existingNotifications, qc]);
 
   return null;
 }

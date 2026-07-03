@@ -66,7 +66,7 @@ console.log("MERGED USER", mergedUser);
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
-        console.log("AUTH EVENT", event);
+        console.log("AUTH EVENT", _event);
     console.log("SESSION", session);
         await loadProfile(session?.user);
       }

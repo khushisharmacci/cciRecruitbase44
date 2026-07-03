@@ -36,3 +36,49 @@ export async function searchCandidatesForDuplicates(data) {
 
   return rows || [];
 }
+import { normalize } from "./utils";
+
+export async function findCandidateDuplicate(values, currentId = null) {
+  const rows = await searchCandidatesForDuplicates(values);
+
+  const filtered = currentId
+    ? rows.filter((row) => row.id !== currentId)
+    : rows;
+
+  let exact = null;
+  const possible = [];
+
+  filtered.forEach((candidate) => {
+    const emailMatch =
+      normalize(candidate.email) === normalize(values.email);
+
+    const phoneMatch =
+      normalize(candidate.phone) === normalize(values.phone);
+
+    const linkedinMatch =
+      normalize(candidate.linkedin) === normalize(values.linkedin);
+
+    if (emailMatch || phoneMatch || linkedinMatch) {
+      exact = candidate;
+      return;
+    }
+
+    const nameMatch =
+      normalize(candidate.full_name) ===
+      normalize(values.full_name);
+
+    const companyMatch =
+      normalize(candidate.current_company) ===
+      normalize(values.current_company);
+
+    if (nameMatch && companyMatch) {
+      possible.push(candidate);
+    }
+  });
+
+  return {
+    exactMatch: exact,
+    possibleMatches: possible,
+    hasDuplicate: !!exact || possible.length > 0,
+  };
+}

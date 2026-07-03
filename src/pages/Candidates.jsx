@@ -71,10 +71,23 @@ export default function Candidates() {
       .insert([data])
       .select();
 
+    console.log("PAYLOAD:", data);
     console.log("INSERTED:", inserted);
-    console.log("SUPABASE ERROR:", error);
+    if (error) {
+  console.log("SUPABASE ERROR OBJECT:", error);
+  console.log("MESSAGE:", error.message);
+  console.log("DETAILS:", error.details);
+  console.log("HINT:", error.hint);
+  console.log("CODE:", error.code);
+  throw error;
+}
 
-    if (error) throw error;
+    if (error) {
+      console.error(error);
+      throw error;
+    }
+
+    return inserted;
   },
 
   onSuccess: () => {
@@ -84,6 +97,15 @@ export default function Candidates() {
 
     setDialogOpen(false);
   },
+
+  onError: (error) => {
+  console.error("CREATE ERROR:", error);
+  console.log("MESSAGE:", error.message);
+  console.log("DETAILS:", error.details);
+  console.log("HINT:", error.hint);
+  console.log("CODE:", error.code);
+  console.log("FULL ERROR:", JSON.stringify(error, null, 2));
+},
 });
 
   const updateMutation = useMutation({

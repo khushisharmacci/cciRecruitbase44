@@ -36,6 +36,52 @@ export default function UserDailyReport() {
   },
 });
 
+const { data: candidates = [] } = useQuery({
+  queryKey: ["candidates"],
+  enabled: !!companyId,
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("candidates")
+      .select("*")
+      .eq("company_id", companyId);
+
+    if (error) throw error;
+    return data || [];
+  },
+});
+
+const { data: clients = [] } = useQuery({
+  queryKey: ["clients"],
+  enabled: true,
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("clients")
+      .select("*");
+
+    console.log("CLIENT QUERY RESULT", data);
+    console.log("CLIENT QUERY ERROR", error);
+
+    if (error) throw error;
+
+    return data || [];
+  },
+});
+console.log("COMPANY ID", companyId);
+console.log("CLIENTS FROM QUERY", clients);
+const { data: positions = [] } = useQuery({
+  queryKey: ["positions"],
+  enabled: !!companyId,
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("positions")
+      .select("*")
+      .eq("company_id", companyId);
+
+    if (error) throw error;
+    return data || [];
+  },
+});
+
   const reportDates = myReports.map(r => r.report_date);
 
   useEffect(() => {
@@ -190,13 +236,25 @@ if (error) throw error;
       </div>
       <div className="lg:col-span-8">
         <ReportEditor
-          selectedDate={selectedDate}
-          workSummary={workSummary} setWorkSummary={setWorkSummary}
-          attachments={attachments} setAttachments={setAttachments}
-          callLogs={callLogs} setCallLogs={setCallLogs}
-          existingReport={existingReport} isDirty={isDirty} saving={saving}
-          onSave={handleSave} onDelete={handleDelete} readOnly={false}
-        />
+  selectedDate={selectedDate}
+  workSummary={workSummary}
+  setWorkSummary={setWorkSummary}
+  attachments={attachments}
+  setAttachments={setAttachments}
+  callLogs={callLogs}
+  setCallLogs={setCallLogs}
+
+  candidates={candidates}
+  clients={clients}
+  positions={positions}
+
+  existingReport={existingReport}
+  isDirty={isDirty}
+  saving={saving}
+  onSave={handleSave}
+  onDelete={handleDelete}
+  readOnly={false}
+/>
       </div>
     </div>
   );

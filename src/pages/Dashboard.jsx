@@ -10,15 +10,16 @@ import { Calendar, Clock, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import DailyReportStatus from "../components/dashboard/DailyReportStatus";
+import UpcomingInterviews from "../components/dashboard/UpcomingInterviews";
 
 const HERO_IMG = "banner2.jpeg";
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const { companyId } = useTenant();
+  useTenant();
 
   const { data: candidates = [] } = useQuery({
-    queryKey: ["candidates"],
+    queryKey: ["candidates", user?.company_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("candidates")
@@ -31,7 +32,7 @@ export default function Dashboard() {
   });
   
   const { data: positions = [] } = useQuery({
-  queryKey: ["positions"],
+  queryKey: ["positions", user?.company_id],
   queryFn: async () => {
     const { data, error } = await supabase
       .from("positions")
@@ -43,7 +44,7 @@ export default function Dashboard() {
   }
 });
   const { data: interviews = [] } = useQuery({
-  queryKey: ["interviews"],
+  queryKey: ["interviews", user?.company_id],
   queryFn: async () => {
     const { data, error } = await supabase
       .from("interviews")
@@ -55,7 +56,7 @@ export default function Dashboard() {
   }
 });
   const { data: revenue = [] } = useQuery({
-  queryKey: ["revenue"],
+  queryKey: ["revenue", user?.company_id],
   queryFn: async () => {
     const { data, error } = await supabase
       .from("revenue_records")
@@ -123,35 +124,54 @@ export default function Dashboard() {
 <DailyReportStatus />
 
 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <RecruitmentFunnel data={funnelData} />
-        </div>
-        <div className="rounded-xl border border-border p-6 bg-card">
-          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-primary" /> Upcoming Interviews
-          </h3>
-          {upcomingInterviews.length === 0 ?
-          <p className="text-muted-foreground text-sm py-8 text-center">No upcoming interviews scheduled</p> :
+  <div className="lg:col-span-2 space-y-6">
+    <RecruitmentFunnel data={funnelData} />
 
-          <div className="space-y-3">
-              {upcomingInterviews.map((i) =>
-            <div key={i.id} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <Clock className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{i.candidate_name}</p>
-                    <p className="text-xs text-muted-foreground">{i.position}</p>
-                    <p className="text-xs text-primary mt-1">
-                      {i.interview_date ? format(new Date(i.interview_date), "MMM d, h:mm a") : "TBD"}
-                    </p>
-                  </div>
-                </div>
-            )}
+    <UpcomingInterviews />
+  </div>
+
+  <div className="rounded-xl border border-border p-6 bg-card">
+    <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+      <Calendar className="h-5 w-5 text-primary" />
+      Upcoming Interviews
+    </h3>
+
+    {upcomingInterviews.length === 0 ? (
+      <p className="text-muted-foreground text-sm py-8 text-center">
+        No upcoming interviews scheduled
+      </p>
+    ) : (
+      <div className="space-y-3">
+        {upcomingInterviews.map((i) => (
+          <div
+            key={i.id}
+            className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
+          >
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Clock className="h-4 w-4 text-primary" />
             </div>
-          }
-        </div>
+
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground truncate">
+                {i.candidate_name}
+              </p>
+
+              <p className="text-xs text-muted-foreground">
+                {i.position_title}
+              </p>
+
+              <p className="text-xs text-primary mt-1">
+                {i.interview_date
+                  ? format(new Date(i.interview_date), "MMM d, h:mm a")
+                  : "TBD"}
+              </p>
+            </div>
+          </div>
+        ))}
       </div>
+    )}
+  </div>
+</div>
 
       <PerformanceCharts />
 

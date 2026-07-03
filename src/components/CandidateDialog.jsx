@@ -1,4 +1,6 @@
+import { findCandidateDuplicate } from "@/lib/duplicateDetection/supabaseQueries";
 import { useState, useEffect } from "react";
+import DuplicateConfirmDialog from "@/components/duplicate/DuplicateConfirmDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import useDuplicateCheck from "@/hooks/useDuplicateCheck";
 import DuplicateWarningCard from "@/components/duplicate/DuplicateWarningCard";
@@ -51,6 +53,8 @@ export default function CandidateDialog({
 
   notes: ""
 });
+const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+const [pendingSave, setPendingSave] = useState(null);
 const duplicate = useDuplicateCheck(
   "candidates",
   form,
@@ -125,35 +129,57 @@ const duplicate = useDuplicateCheck(
 });
     }
   }, [candidate, open]);
+  const saveCandidate = () => {
+  onSave({
+    ...form,
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSave({
-  ...form,
+    // Empty date should be null, not ""
+    candidate_date: form.candidate_date || null,
 
-  candidate_date: form.candidate_date || null,
+    experience_years: form.experience_years
+      ? Number(form.experience_years)
+      : null,
 
-  experience_years:
-    form.experience_years === ""
-      ? null
-      : Number(form.experience_years),
+    current_ctc: form.current_ctc
+      ? Number(form.current_ctc)
+      : null,
 
-  current_ctc:
-    form.current_ctc === ""
-      ? null
-      : Number(form.current_ctc),
+    expected_ctc: form.expected_ctc
+      ? Number(form.expected_ctc)
+      : null,
 
-  expected_ctc:
-    form.expected_ctc === ""
-      ? null
-      : Number(form.expected_ctc),
+    // Optional text fields
+    phone: form.phone || null,
+    linkedin: form.linkedin || null,
+    location: form.location || null,
+    geographical_location: form.geographical_location || null,
+    current_company: form.current_company || null,
+    current_job_role: form.current_job_role || null,
+    sourced_by: form.sourced_by || null,
+    spoken_by: form.spoken_by || null,
+    notes: form.notes || null,
+    academics: form.academics || null,
+    position: form.position || null,
+    data_file_id: form.data_file_id || null,
+  });
+};
 
-  data_file_id:
-    form.data_file_id === ""
-      ? null
-      : form.data_file_id,
-});
-  };
+  const handleSubmit = async (e) => {
+  e.preventDefault();
+
+  const duplicate = await findCandidateDuplicate(
+    form,
+    candidate?.id
+  );
+
+  if (duplicate.exactMatch) {
+    setPendingSave(duplicate.exactMatch);
+    setShowDuplicateDialog(true);
+    return;
+  }
+
+  saveCandidate();
+};
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -390,5 +416,14 @@ const duplicate = useDuplicateCheck(
           </div>
         </form>
       </DialogContent>
+      <DuplicateConfirmDialog
+  open={showDuplicateDialog}
+  onOpenChange={setShowDuplicateDialog}
+  candidate={pendingSave}
+  onSaveAnyway={() => {
+    setShowDuplicateDialog(false);
+    saveCandidate();
+  }}
+/>
     </Dialog>);
 }

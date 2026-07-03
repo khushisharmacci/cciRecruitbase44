@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Calendar, Plus, Pencil, Trash2, Clock, Video, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { useAuth } from "@/lib/AuthContext";
 
 const statusColors = {
   "Scheduled": "bg-amber-500/15 text-amber-300",
@@ -17,6 +18,8 @@ const statusColors = {
   "Selected": "bg-emerald-500/15 text-emerald-300",
   "Rejected": "bg-red-500/15 text-red-300",
   "On Hold": "bg-gray-500/15 text-gray-400",
+  "Cancelled": "bg-red-500/15 text-red-300",
+  "Rescheduled": "bg-purple-500/15 text-purple-300",
 };
 
 const typeIcons = {
@@ -25,6 +28,7 @@ const typeIcons = {
 };
 
 export default function InterviewManager({ candidate }) {
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -51,27 +55,119 @@ export default function InterviewManager({ candidate }) {
     return db - da;
   });
 
+  const invalidateAll = () => {
+  queryClient.invalidateQueries({
+    queryKey: ["candidate-interviews", candidate.id],
+  });
+
+  queryClient.invalidateQueries({
+    queryKey: ["interviews"],
+  });
+
+  queryClient.invalidateQueries({
+    queryKey: ["upcoming-interviews"],
+  });
+
+  queryClient.invalidateQueries({
+    queryKey: ["notifications"],
+  });
+
+  queryClient.invalidateQueries({
+    queryKey: ["sidebar-notifications"],
+  });
+};
+
   const createMutation = useMutation({
     mutationFn: async (data) => {
-  const { error } = await supabase
+  const { data: created, error } = await supabase
     .from("interviews")
-    .insert([data]);
+    .insert([data])
+    .select()
+    .single();
 
   if (error) throw error;
+
+  return created;
 },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["candidate-interviews", candidate.id] }); setDialogOpen(false); },
+    onSuccess: async (created) => {
+  invalidateAll();
+
+  await supabase.from("notifications").insert([
+    {
+      title: `Interview scheduled: ${created.candidate_name}`,
+      message: `Interview scheduled with ${created.candidate_name}`,
+      user_id: candidate.user_id,
+      company_id: candidate.company_id,
+      created_at: new Date().toISOString(),
+      type: "Interview",
+      read: false,
+      link: "/interviews",
+    },
+  ]);
+setEditing(null);
+
+setForm({
+  interview_date: "",
+  interview_time: "",
+  interview_type: "Online",
+  status: "Scheduled",
+  notes: "",
+  interviewer: "",
+  location: "",
+});
+  setDialogOpen(false);
+},
   });
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("interviews")
     .update(data)
-    .eq("id", id);
+    .eq("id", id)
+    .select()
+    .single();
 
   if (error) throw error;
+
+  return updated;
 },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["candidate-interviews", candidate.id] }); setDialogOpen(false); },
+    onSuccess: async (updated, { data }) => {
+  invalidateAll();
+
+  let action = "updated";
+
+  if (data.status === "Cancelled")
+    action = "cancelled";
+
+  else if (data.status === "Completed")
+    action = "completed";
+
+  else if (data.status === "Rescheduled")
+    action = "rescheduled";
+
+  await supabase.from("notifications").insert([
+    {
+      title: `Interview ${action}: ${updated.candidate_name}`,
+      message: `Interview ${action} for ${updated.candidate_name}`,
+      type: "Interview",
+      read: false,
+      link: "/interviews",
+    },
+  ]);
+setEditing(null);
+
+setForm({
+  interview_date: "",
+  interview_time: "",
+  interview_type: "Online",
+  status: "Scheduled",
+  notes: "",
+  interviewer: "",
+  location: "",
+});
+  setDialogOpen(false);
+},
   });
 
   const deleteMutation = useMutation({
@@ -83,7 +179,9 @@ export default function InterviewManager({ candidate }) {
 
   if (error) throw error;
 },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["candidate-interviews", candidate.id] }),
+    onSuccess: () => {
+  invalidateAll();
+},
   });
 
   const openAdd = () => {
@@ -91,6 +189,16 @@ export default function InterviewManager({ candidate }) {
     setForm({ interview_date: "", interview_time: "", interview_type: "Online", status: "Scheduled", notes: "", interviewer: "", location: "" });
     setDialogOpen(true);
   };
+
+const statuses = [
+  "Scheduled",
+  "Completed",
+  "Cancelled",
+  "Rescheduled",
+  "Selected",
+  "Rejected",
+  "On Hold",
+];
 
   const openEdit = (interview) => {
     setEditing(interview);
@@ -107,14 +215,33 @@ export default function InterviewManager({ candidate }) {
   };
 
   const handleSubmit = () => {
-    const data = {
-      candidate_id: candidate.id,
-      candidate_name: candidate.full_name,
-      position: candidate.position || "",
-      ...form,
-    };
+   const data = {
+  candidate_id: candidate.id,
+  candidate_name: candidate.full_name,
+  position_title:
+    candidate.position_title ||
+    candidate.position ||
+    "",
+
+  company_id: candidate.company_id,
+  user_id: candidate.user_id,
+
+  created_by:
+    user?.full_name ||
+    user?.name ||
+    user?.email ||
+    "",
+
+  ...form,
+};
     if (editing) {
-      updateMutation.mutate({ id: editing.id, data: form });
+      updateMutation.mutate({
+  id: editing.id,
+  data: {
+    ...editing,
+    ...form,
+  },
+});
     } else {
       createMutation.mutate(data);
     }
@@ -205,12 +332,15 @@ export default function InterviewManager({ candidate }) {
                 <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Scheduled">Scheduled</SelectItem>
-                    <SelectItem value="Completed">Completed</SelectItem>
-                    <SelectItem value="Selected">Selected</SelectItem>
-                    <SelectItem value="Rejected">Rejected</SelectItem>
-                    <SelectItem value="On Hold">On Hold</SelectItem>
-                  </SelectContent>
+  {statuses.map((status) => (
+    <SelectItem
+      key={status}
+      value={status}
+    >
+      {status}
+    </SelectItem>
+  ))}
+</SelectContent>
                 </Select>
               </div>
             </div>

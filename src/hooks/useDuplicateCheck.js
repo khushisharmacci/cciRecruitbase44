@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { normalize } from "@/lib/duplicateDetection/utils";
-import { searchCandidatesForDuplicates } from "@/lib/duplicateDetection/supabaseQueries";
+import { findCandidateDuplicate } from "@/lib/duplicateDetection/supabaseQueries";
 
 export default function useDuplicateCheck(
   entity,
@@ -37,47 +37,12 @@ export default function useDuplicateCheck(
 
         setLoading(true);
 
-        const rows = await searchCandidatesForDuplicates(values);
-        const filteredRows = currentId
-  ? rows.filter((row) => row.id !== currentId)
-  : rows;
+        const duplicate = await findCandidateDuplicate(
+  values,
+  currentId
+);
 
-        let exact = null;
-        const possible = [];
-
-        filteredRows.forEach((candidate) => {
-          const emailMatch =
-            normalize(candidate.email) === normalize(values.email);
-
-          const phoneMatch =
-            normalize(candidate.phone) === normalize(values.phone);
-
-          const linkedinMatch =
-            normalize(candidate.linkedin) === normalize(values.linkedin);
-
-          if (emailMatch || phoneMatch || linkedinMatch) {
-            exact = candidate;
-            return;
-          }
-
-          const nameMatch =
-            normalize(candidate.full_name) ===
-            normalize(values.full_name);
-
-          const companyMatch =
-            normalize(candidate.current_company) ===
-            normalize(values.current_company);
-
-          if (nameMatch && companyMatch) {
-            possible.push(candidate);
-          }
-        });
-
-        setResult({
-          exactMatch: exact,
-          possibleMatches: possible,
-          hasDuplicate: !!exact || possible.length > 0,
-        });
+setResult(duplicate);
       } catch (err) {
         console.error("Duplicate check failed", err);
       } finally {

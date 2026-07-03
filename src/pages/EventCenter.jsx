@@ -2,18 +2,27 @@ import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { parseISO, isPast, isToday, isTomorrow, isThisWeek, format } from "date-fns";
-import { Plus, Calendar, List, BarChart2, Search, Filter, AlertTriangle } from "lucide-react";
+import {
+  Plus,
+  Calendar,
+  List,
+  BarChart2,
+  Search,
+  Filter,
+  AlertTriangle,
+  Info,
+} from "lucide-react";
+
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import EventForm from "@/components/events/EventForm";
 import QuickAddButton from "@/components/events/QuickAddButton";
 import EventCard from "@/components/events/EventCard";
 import EventCalendar from "@/components/events/EventCalendar";
 import EventAnalytics from "@/components/events/EventAnalytics";
-import { PRIORITY_COLORS } from "@/components/events/eventUtils";
 
 const VIEWS = ["List", "Calendar", "Analytics"];
 const PRIORITY_FILTERS = ["All", "Critical", "High", "Medium", "Low"];
@@ -35,7 +44,7 @@ export default function EventCenter() {
   const [deleteTarget, setDeleteTarget] = useState(null);
 
 const { data: events = [], isLoading } = useQuery({
-  queryKey: ["events"],
+  queryKey: ["events", "supabase"],
   queryFn: async () => {
     const { data, error } = await supabase
       .from("events")
@@ -63,6 +72,7 @@ const { data: events = [], isLoading } = useQuery({
   onSuccess: () => {
     console.log("EVENT CREATED");
     qc.invalidateQueries({ queryKey: ["events"] });
+    qc.invalidateQueries({ queryKey: ["events-widget"] });
     setFormOpen(false);
   },
 });
@@ -78,6 +88,7 @@ const updateMutation = useMutation({
   },
   onSuccess: () => {
     qc.invalidateQueries({ queryKey: ["events"] });
+    qc.invalidateQueries({ queryKey: ["events-widget"] });
     setFormOpen(false);
     setEditEvent(null);
   },
@@ -94,6 +105,7 @@ const deleteMutation = useMutation({
   },
   onSuccess: () => {
     qc.invalidateQueries({ queryKey: ["events"] });
+    qc.invalidateQueries({ queryKey: ["events-widget"] });
     setDeleteTarget(null);
   },
 });
@@ -107,9 +119,18 @@ const deleteMutation = useMutation({
   const handleNew = () => {setEditEvent(null);setFormOpen(true);};
 
   // Overdue detection
-  const overdueCount = events.filter((e) => e.status === "Upcoming" && isPast(parseISO(e.start_datetime))).length;
+  const overdueCount = events.filter((e) => {
+  if (!e.start_datetime) return false;
+
+  return (
+    e.status === "Upcoming" &&
+    isPast(parseISO(e.start_datetime))
+  );
+}).length;
 
   const filtered = events.filter((e) => {
+  // Interviews are managed from the Interviews page
+  if (e.event_type === "Interview") return false;
     if (search && !e.title?.toLowerCase().includes(search.toLowerCase()) && !e.event_type?.toLowerCase().includes(search.toLowerCase())) return false;
     if (priorityFilter !== "All" && e.priority !== priorityFilter) return false;
     if (typeFilter !== "All" && e.event_type !== typeFilter) return false;
@@ -154,6 +175,25 @@ const deleteMutation = useMutation({
           <button onClick={() => {setStatusFilter("Overdue");setDateFilter("All Time");}} className="ml-auto text-xs underline shrink-0">View all</button>
         </div>
       }
+      {events.some((e) => e.event_type === "Interview") && (
+  <Link
+    to="/interviews"
+    className="flex items-center gap-3 p-4 rounded-xl bg-primary/10 border border-primary/30 text-primary hover:bg-primary/15 transition-colors"
+  >
+    <Info className="h-5 w-5 shrink-0" />
+
+    <div>
+      <span className="font-semibold">
+        Interview scheduling has moved
+      </span>
+
+      <span className="text-sm ml-2">
+        — All interviews are now managed in the dedicated Interviews page.
+        Click to go there.
+      </span>
+    </div>
+  </Link>
+)}
 
       {/* View tabs */}
       <div className="flex items-center gap-1 bg-muted rounded-lg p-1 w-fit">
