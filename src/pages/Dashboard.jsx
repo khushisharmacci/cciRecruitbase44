@@ -11,7 +11,7 @@ import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import DailyReportStatus from "../components/dashboard/DailyReportStatus";
 import UpcomingInterviews from "../components/dashboard/UpcomingInterviews";
-
+import { Button } from "@/components/ui/button";
 const HERO_IMG = "banner2.jpeg";
 
 export default function Dashboard() {
@@ -92,12 +92,37 @@ export default function Dashboard() {
     selected: statusCount(candidates, "status", "Selected") + statusCount(candidates, "status", "Offer Released"),
     joined: statusCount(candidates, "status", "Joined")
   };
-
+console.log("ALL interviews:", interviews);
   const upcomingInterviews = interviews.
   filter((i) => i.status === "Scheduled").
   sort((a, b) => new Date(a.interview_date) - new Date(b.interview_date)).
   slice(0, 5);
+const formatInterviewDate = (interview) => {
+  if (!interview?.interview_date) return "TBD";
 
+  const date = new Date(interview.interview_date);
+
+  // Use the stored time instead of the timestamp's time component
+  if (interview.interview_time) {
+    const [hours, minutes] = interview.interview_time.split(":");
+
+    date.setHours(Number(hours));
+    date.setMinutes(Number(minutes));
+    date.setSeconds(0);
+  }
+
+  return format(date, "MMM d, h:mm a");
+};
+upcomingInterviews.forEach((i) => {
+  console.log({
+    id: i.id,
+    interview_date: i.interview_date,
+    interview_time: i.interview_time,
+    scheduled_at: i.scheduled_at,
+    interview_datetime: i.interview_datetime,
+    created_at: i.created_at,
+  });
+});
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       {/* Welcome banner */}
@@ -123,54 +148,56 @@ export default function Dashboard() {
 
 <DailyReportStatus />
 
-<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-  <div className="lg:col-span-2 space-y-6">
-    <RecruitmentFunnel data={funnelData} />
+<div className="w-full">
 
-    <UpcomingInterviews />
-  </div>
-
-  <div className="rounded-xl border border-border p-6 bg-card">
-    <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+  <div className="rounded-xl border border-border bg-card p-6">
+  <div className="flex items-center justify-between mb-5">
+    <h3 className="text-lg font-semibold flex items-center gap-2">
       <Calendar className="h-5 w-5 text-primary" />
       Upcoming Interviews
     </h3>
 
-    {upcomingInterviews.length === 0 ? (
-      <p className="text-muted-foreground text-sm py-8 text-center">
-        No upcoming interviews scheduled
-      </p>
-    ) : (
-      <div className="space-y-3">
-        {upcomingInterviews.map((i) => (
-          <div
-            key={i.id}
-            className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors"
-          >
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <Clock className="h-4 w-4 text-primary" />
+    <Link to="/interviews">
+  <Button variant="outline" size="sm">
+    View All →
+  </Button>
+</Link>
+  </div>
+
+  {upcomingInterviews.length === 0 ? (
+    <p className="text-muted-foreground text-center py-8">
+      No upcoming interviews scheduled
+    </p>
+  ) : (
+    <div className="space-y-3">
+      {upcomingInterviews.map((i) => (
+        <div
+          key={i.id}
+          className="flex items-center justify-between rounded-lg border border-border p-4 hover:bg-muted/50 transition-colors"
+        >
+          <div className="flex items-center gap-4">
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <Clock className="h-5 w-5 text-primary" />
             </div>
 
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">
-                {i.candidate_name}
-              </p>
-
-              <p className="text-xs text-muted-foreground">
+            <div>
+              <p className="font-medium">{i.candidate_name}</p>
+              <p className="text-sm text-muted-foreground">
                 {i.position_title}
-              </p>
-
-              <p className="text-xs text-primary mt-1">
-                {i.interview_date
-                  ? format(new Date(i.interview_date), "MMM d, h:mm a")
-                  : "TBD"}
               </p>
             </div>
           </div>
-        ))}
-      </div>
-    )}
-  </div>
+
+          <div className="text-right">
+            <p className="font-medium">
+              {formatInterviewDate(i)}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
 </div>
 
       <PerformanceCharts />

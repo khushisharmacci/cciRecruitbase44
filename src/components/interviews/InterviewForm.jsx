@@ -8,18 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import CandidateSearch from "./CandidateSearch";
 import CompanySearch from "./CompanySearch";
 
-const REMINDER_OPTIONS = [
-  { label: "No reminder", value: 0 },
-  { label: "5 min before", value: 5 },
-  { label: "15 min before", value: 15 },
-  { label: "30 min before", value: 30 },
-  { label: "1 hour before", value: 60 },
-  { label: "3 hours before", value: 180 },
-  { label: "1 day before", value: 1440 },
-];
-
-import { useAuth } from "@/lib/AuthContext";
-
 export default function InterviewForm({
   open,
   onOpenChange,
@@ -27,21 +15,19 @@ export default function InterviewForm({
   onSave,
   isLoading,
 }) {
-  const { user } = useAuth(); 
   const [candidate, setCandidate] = useState(null);
   const [company, setCompany] = useState(null);
-  const [form, setForm] = useState({
-    position_title: "",
-    interview_date: "",
-    interview_time: "",
-    interview_type: "Online",
-    location: "",
-    notes: "",
-    status: "Scheduled",
-    reminder_minutes: 30,
-    interviewer: "",
-  });
   const [errors, setErrors] = useState({});
+  const [form, setForm] = useState({
+  position_title: "",
+  interview_date: "",
+  interview_time: "",
+  interview_type: "Online",
+  location: "",
+  notes: "",
+  status: "Scheduled",
+  interviewer: "",
+});
 
   useEffect(() => {
     if (editing) {
@@ -54,7 +40,15 @@ export default function InterviewForm({
   position_title: editing.position_title,
   company_id: editing.company_id || "",
 });
-      setCompany(editing.company_name ? { id: "", name: editing.company_name, industry: "" } : null);
+      setCompany(
+  editing.company_id
+    ? {
+        id: editing.company_id,
+        name: editing.company_name || "",
+        industry: editing.industry || "",
+      }
+    : null
+);
       setForm({
         position_title: editing.position_title || "",
         interview_date: editing.interview_date ? editing.interview_date.split("T")[0] : "",
@@ -63,7 +57,6 @@ export default function InterviewForm({
         location: editing.location || "",
         notes: editing.notes || editing.feedback || "",
         status: editing.status || "Scheduled",
-        reminder_minutes: editing.reminder_minutes ?? 30,
         interviewer: editing.interviewer || "",
       });
     } else {
@@ -77,7 +70,6 @@ export default function InterviewForm({
         location: "",
         notes: "",
         status: "Scheduled",
-        reminder_minutes: 30,
         interviewer: "",
       });
     }
@@ -121,24 +113,20 @@ export default function InterviewForm({
     if (Object.keys(errs).length > 0) return;
 
     onSave({
-      candidate_id: candidate.id,
-      candidate_name: candidate.full_name,
-      company_name: company.name,
-      position_title: form.position_title.trim(),
-location: form.location.trim(),
-notes: form.notes.trim(),
-interviewer: form.interviewer.trim(),
-      interview_date: form.interview_date,
-      interview_time: form.interview_time,
-      interview_type: form.interview_type,
-      status: form.status,
-      reminder_minutes: form.reminder_minutes,
-      created_by:
-  user?.full_name ||
-  user?.name ||
-  user?.email ||
-  "",
-    });
+  candidate_id: candidate.id,
+  candidate_name: candidate.full_name,
+  company_id: company.id,
+
+  position_title: form.position_title.trim(),
+  location: form.location.trim(),
+  notes: form.notes.trim(),
+  interviewer: form.interviewer.trim(),
+
+  interview_date: form.interview_date,
+  interview_time: form.interview_time,
+  interview_type: form.interview_type,
+  status: form.status,
+});
   };
 
   return (
@@ -161,6 +149,7 @@ interviewer: form.interviewer.trim(),
           <div>
             <Label className="mb-1.5 block">Position *</Label>
             <Input
+            required
               value={form.position_title}
               onChange={(e) => setForm({ ...form, position_title: e.target.value })}
               placeholder="Position title"
@@ -192,15 +181,27 @@ interviewer: form.interviewer.trim(),
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Interview Type</Label>
-              <Select value={form.interview_type} onValueChange={(v) => setForm({ ...form, interview_type: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Online">Online</SelectItem>
-                  <SelectItem value="Offline">Offline</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+  <Label>Interview Type</Label>
+  <Select
+    value={form.interview_type}
+    onValueChange={(value) =>
+      setForm({
+        ...form,
+        interview_type: value,
+      })
+    }
+  >
+    <SelectTrigger>
+      <SelectValue />
+    </SelectTrigger>
+
+    <SelectContent>
+      <SelectItem value="Online">Online</SelectItem>
+      <SelectItem value="Offline">Offline</SelectItem>
+      <SelectItem value="Telephonic">Telephonic</SelectItem>
+    </SelectContent>
+  </Select>
+</div>
             <div>
               <Label>Status</Label>
               <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
@@ -227,15 +228,7 @@ interviewer: form.interviewer.trim(),
             <Label>Interviewer</Label>
             <Input value={form.interviewer} onChange={(e) => setForm({ ...form, interviewer: e.target.value })} placeholder="Interviewer name" />
           </div>
-          <div>
-            <Label>Reminder</Label>
-            <Select value={String(form.reminder_minutes)} onValueChange={(v) => setForm({ ...form, reminder_minutes: Number(v) })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {REMINDER_OPTIONS.map((opt) => <SelectItem key={opt.value} value={String(opt.value)}>{opt.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
+          
           <div>
             <Label>Notes</Label>
             <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} placeholder="Interview notes..." />

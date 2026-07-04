@@ -83,36 +83,31 @@ export default function Interviews() {
 
   const createMutation = useMutation({
   mutationFn: async (data) => {
-    const { data: created, error } = await supabase
-      .from("interviews")
-      .insert([data])
-      .select()
-      .single();
+    console.log("INSERT DATA");
+    console.log(JSON.stringify(data, null, 2));
 
-    if (error) throw error;
+    const { data: inserted, error } = await supabase
+  .from("interviews")
+  .insert([data])
+  .select()
+  .single();
 
-    return created;
+if (error) throw error;
+
+return inserted;
+
   },
 
-  onSuccess: async (created) => {
-    invalidateAll();
+  onSuccess: () => {
+  invalidateAll();
 
-    await supabase.from("notifications").insert([
-      {
-        title: `Interview scheduled: ${created.candidate_name}`,
-        message: `Interview scheduled with ${created.candidate_name}`,
-        type: "Interview",
-        read: false,
-        link: "/interviews",
-      },
-    ]);
+  setFormOpen(false);
+  setEditing(null);
 
-    setFormOpen(false);
-
-    toast({
-      title: "Interview scheduled",
-    });
-  },
+  toast({
+    title: "Interview scheduled successfully",
+  });
+},
 });
 
   const updateMutation = useMutation({
@@ -154,24 +149,35 @@ export default function Interviews() {
 });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id) => {
-  const { error } = await supabase
-    .from("interviews")
-    .delete()
-    .eq("id", id);
+  mutationFn: async (id) => {
+    const { error } = await supabase
+      .from("interviews")
+      .delete()
+      .eq("id", id);
 
-  if (error) throw error;
-},
-    onSuccess: () => { invalidateAll(); setDeleteTarget(null); toast({ title: "Interview deleted" }); },
-  });
+    if (error) throw error;
+  },
+
+  onSuccess: () => {
+    invalidateAll();
+    setDeleteTarget(null);
+
+    toast({
+      title: "Interview deleted",
+    });
+  },
+});
 
   const handleSave = (data) => {
-    if (editing) {
-      updateMutation.mutate({ id: editing.id, data });
-    } else {
-      createMutation.mutate(data);
-    }
-  };
+  console.log("HANDLE SAVE DATA");
+  console.log(JSON.stringify(data, null, 2));
+
+  if (editing) {
+    updateMutation.mutate({ id: editing.id, data });
+  } else {
+    createMutation.mutate(data);
+  }
+};
 
   const handleReschedule = (interview) => {
     setEditing(interview);

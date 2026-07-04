@@ -9,7 +9,8 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import AttachmentUploader from "./AttachmentUploader";
 import CallLogs from "./CallLogs";
 
@@ -31,6 +32,20 @@ export default function ReportEditor({
   onDelete,
   readOnly = false,
 }) {
+  const { data: files = [] } = useQuery({
+  queryKey: ["spreadsheet-files"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("data_files")
+      .select("id, name")
+      .eq("entity_type", "candidates")
+      .order("name");
+
+    if (error) throw error;
+
+    return data || [];
+  },
+});
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-border bg-card p-5">
@@ -129,6 +144,7 @@ Plans for Tomorrow:`}
       clients={clients}
       positions={positions}
       readOnly={readOnly}
+      files={files}
 />
     </div>
   );

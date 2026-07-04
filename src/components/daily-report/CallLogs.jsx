@@ -31,6 +31,7 @@ export default function CallLogs({
   candidates = [],
   clients = [],
   positions = [],
+  files = [],
 }) {
   console.log("CALL LOG CLIENTS", clients);
   console.log("CALL LOG POSITIONS", positions);
@@ -38,9 +39,14 @@ export default function CallLogs({
   person_name: "",
   phone_number: "",
   discussion_notes: "",
+
+  company_id: "",
   company_name: "",
+
   position_title: "",
+
   candidate_id: "",
+  data_file_id: "",
 };
 
   const [editing, setEditing] = useState(-1);
@@ -178,6 +184,37 @@ if (Object.keys(errs).length) return;
   }}
 />
 
+<div>
+  <Label className="mb-1 block text-xs">
+    Spreadsheet
+  </Label>
+
+  <Select
+    value={form.data_file_id}
+    onValueChange={(value) =>
+      setForm((prev) => ({
+        ...prev,
+        data_file_id: value,
+      }))
+    }
+  >
+    <SelectTrigger>
+      <SelectValue placeholder="Select spreadsheet" />
+    </SelectTrigger>
+
+    <SelectContent>
+      {files.map((file) => (
+        <SelectItem
+          key={file.id}
+          value={file.id}
+        >
+          {file.name}
+        </SelectItem>
+      ))}
+    </SelectContent>
+  </Select>
+</div>
+
 {errors.phone_number && (
   <p className="mt-1 text-xs text-red-500">
     {errors.phone_number}
@@ -189,20 +226,30 @@ if (Object.keys(errs).length) return;
   </Label>
 
   <Select
-    value={form.company_name}
+    value={form.company_id}
     onValueChange={(value) => {
-      setForm((prev) => ({
-        ...prev,
-        company_name: value,
-        position_title: "",
-      }));
+  const selectedClient = clients.find(
+    (client) => client.id === value
+  );
 
-      setErrors((prev) => ({
-        ...prev,
-        company_name: undefined,
-        position_title: undefined,
-      }));
-    }}
+  setForm((prev) => ({
+    ...prev,
+
+    // Keep the ID separately
+    company_id: value,
+
+    // Store the actual name for display
+    company_name: selectedClient?.name || "",
+
+    position_title: "",
+  }));
+
+  setErrors((prev) => ({
+    ...prev,
+    company_name: undefined,
+    position_title: undefined,
+  }));
+}}
   >
     <SelectTrigger
       className={errors.company_name ? "border-red-500" : ""}
@@ -264,7 +311,7 @@ if (Object.keys(errs).length) return;
       {positions
   .filter(
     (position) =>
-      position.company_id === form.company_name
+      position.company_id === form.company_id
   )
         .map((position) => (
           <SelectItem
@@ -336,31 +383,39 @@ if (Object.keys(errs).length) return;
               </div>
 
               <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-  <p className="text-sm font-medium">
-    {log.person_name}
-  </p>
+  <div className="flex flex-wrap items-center gap-2">
+    <p className="text-sm font-medium">
+      {log.person_name}
+    </p>
 
-  {log.phone_number && (
-    <span className="text-xs text-muted-foreground">
-      {log.phone_number}
-    </span>
+    {log.phone_number && (
+      <span className="text-xs text-muted-foreground">
+        {log.phone_number}
+      </span>
+    )}
+
+    {log.candidate_id && (
+      <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-500">
+        <Check className="h-3 w-3" />
+        Linked Candidate
+      </span>
+    )}
+  </div>
+
+  {(log.company_name || log.position_title) && (
+    <p className="mt-1 text-xs text-primary font-medium">
+      {log.company_name}
+      {log.company_name && log.position_title ? " • " : ""}
+      {log.position_title}
+    </p>
   )}
 
-  {log.candidate_id && (
-    <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs text-emerald-500">
-      <Check className="h-3 w-3" />
-      Linked Candidate
-    </span>
+  {log.discussion_notes && (
+    <p className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">
+      {log.discussion_notes}
+    </p>
   )}
 </div>
-
-                {log.discussion_notes && (
-                  <p className="mt-1 text-sm text-muted-foreground whitespace-pre-wrap">
-                    {log.discussion_notes}
-                  </p>
-                )}
-              </div>
 
               {!readOnly && editing === -1 && (
                 <div className="flex shrink-0 gap-1">

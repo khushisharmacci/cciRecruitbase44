@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import ReportCalendar from "./ReportCalendar";
 import ReportEditor from "./ReportEditor";
 import { supabase } from "@/lib/supabase";
+import { syncCallLogToSpreadsheet } from "@/lib/spreadsheetSync";
 
 export default function UserDailyReport() {
   const { user } = useAuth();
@@ -78,6 +79,20 @@ const { data: positions = [] } = useQuery({
       .eq("company_id", companyId);
 
     if (error) throw error;
+    return data || [];
+  },
+});
+
+const { data: files = [] } = useQuery({
+  queryKey: ["spreadsheet-files"],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("data_files")
+      .select("id, name")
+      .order("name");
+
+    if (error) throw error;
+
     return data || [];
   },
 });
@@ -173,19 +188,33 @@ setExistingReport(newReport);
       if (callLogs.length > 0) {
 
 const logs = callLogs.map(log => ({
-    report_id: reportId,
-    company_id: companyId,
-    person_name: log.person_name,
-    phone_number: log.phone_number,
-    discussion_notes: log.discussion_notes,
-}));
+  report_id: reportId,
+  company_id: companyId,
 
+  person_name: log.person_name,
+  phone_number: log.phone_number,
+
+  spreadsheet_id: log.spreadsheet_id || null,
+  company_name: log.company_name || null,
+  position_title: log.position_title || null,
+
+  discussion_notes: log.discussion_notes,
+}));
+console.log("LOGS TO SAVE", logs);
 const { error } = await supabase
 .from("daily_report_call_logs")
 .insert(logs);
 
 if (error) throw error;
+console.log("STARTING SPREADSHEET SYNC");
 
+for (const log of logs) {
+  console.log("SYNCING LOG:", log);
+
+  await syncCallLogToSpreadsheet(log);
+
+  console.log("SYNC COMPLETE");
+}
       }
       await queryClient.invalidateQueries({
   queryKey: ["daily-reports"],
@@ -247,6 +276,7 @@ if (error) throw error;
   candidates={candidates}
   clients={clients}
   positions={positions}
+  files={files}   // ✅ Add this
 
   existingReport={existingReport}
   isDirty={isDirty}

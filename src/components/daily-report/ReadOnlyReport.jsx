@@ -60,6 +60,7 @@ export default function ReadOnlyReport({ report }) {
         callLogs={callLogs}
         setCallLogs={() => {}}
         readOnly
+        files={files}
       />
     </div>
   );
