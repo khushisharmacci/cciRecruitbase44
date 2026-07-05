@@ -64,36 +64,33 @@ export default function Candidates() {
 });
   const createMutation = useMutation({
   mutationFn: async (data) => {
-    console.log("SAVING CANDIDATE:", data);
+  const { data: inserted, error } = await supabase
+    .from("candidates")
+    .insert([data])
+    .select()
+    .single();
 
-    const { data: inserted, error } = await supabase
-      .from("candidates")
-      .insert([data])
-      .select();
+  if (error) throw error;
 
-    console.log("PAYLOAD:", data);
-    console.log("INSERTED:", inserted);
-    if (error) {
-  console.log("SUPABASE ERROR OBJECT:", error);
-  console.log("MESSAGE:", error.message);
-  console.log("DETAILS:", error.details);
-  console.log("HINT:", error.hint);
-  console.log("CODE:", error.code);
-  throw error;
-}
-
-    if (error) {
-      console.error(error);
-      throw error;
-    }
-
-    return inserted;
-  },
+  return inserted;
+},
 
   onSuccess: () => {
-    queryClient.invalidateQueries({
-      queryKey: ["candidates"],
-    });
+    onSuccess: () => {
+  queryClient.invalidateQueries({
+    queryKey: ["candidates"],
+  });
+
+  queryClient.invalidateQueries({
+    queryKey: ["spreadsheet"],
+  });
+
+  queryClient.invalidateQueries({
+    queryKey: ["candidate-files"],
+  });
+
+  setDeleteId(null);
+},
 
     setDialogOpen(false);
   },
@@ -111,28 +108,65 @@ export default function Candidates() {
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }) => {
   const payload = {
-    ...data,
-    current_job_role: data.current_job_role
-  };
+  ...data,
+};
 
-  delete payload.current_job_role;
-
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("candidates")
     .update(payload)
-    .eq("id", id);
+    .eq("id", id)
+    .select()
+    .single();
 
-  if (error) throw error;
+if (error) throw error;
+
+return updated;
 },
-    onSuccess: () => {queryClient.invalidateQueries({ queryKey: ["candidates"] });setDialogOpen(false);setEditCandidate(null);}
+    onSuccess: () => {
+  queryClient.invalidateQueries({
+    queryKey: ["candidates"],
+  });
+
+  queryClient.invalidateQueries({
+    queryKey: ["spreadsheet"],
+  });
+
+  setDialogOpen(false);
+},
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id) => {
+    mutationFn: async (candidate) => {
+  if (candidate.data_file_id) {
+    const { data: file } = await supabase
+      .from("data_files")
+      .select("rows_data")
+      .eq("id", candidate.data_file_id)
+      .single();
+
+    if (file) {
+      const rows =
+        typeof file.rows_data === "string"
+          ? JSON.parse(file.rows_data)
+          : file.rows_data || [];
+
+      const updatedRows = rows.filter(
+        (r) => r._candidate_id !== candidate.id
+      );
+
+      await supabase
+        .from("data_files")
+        .update({
+          rows_data: updatedRows,
+        })
+        .eq("id", candidate.data_file_id);
+    }
+  }
+
   const { error } = await supabase
     .from("candidates")
     .delete()
-    .eq("id", id);
+    .eq("id", candidate.id);
 
   if (error) throw error;
 },
@@ -183,13 +217,17 @@ useEffect(() => {
   });
 };
 
-const handleSave = (data) => {
+const handleSave = async (data) => {
   if (editCandidate) {
-    updateMutation.mutate({ id: editCandidate.id, data });
-  } else {
-    console.log("DATA BEING SAVED:", data);
-    createMutation.mutate(data);
+    return await updateMutation.mutateAsync({
+      id: editCandidate.id,
+      data,
+    });
   }
+
+  console.log("DATA BEING SAVED:", data);
+
+  return await createMutation.mutateAsync(data);
 };
 
   return (
@@ -356,7 +394,7 @@ const handleSave = (data) => {
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {setEditCandidate(c);setDialogOpen(true);}}>
                           <Pencil className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(c.id)}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(c)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>

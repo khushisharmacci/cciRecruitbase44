@@ -13,7 +13,10 @@ export async function syncCallLogToSpreadsheet(log) {
     return;
   }
 
-  const { data: spreadsheet, error } = await supabase
+  const { data: spreadsheet, error } =
+  console.log("Saving rows:");
+console.log(JSON.stringify(updatedRows, null, 2));
+ await supabase
     .from("data_files")
     .select("id, name, columns, rows_data")
     .eq("id", spreadsheetId)

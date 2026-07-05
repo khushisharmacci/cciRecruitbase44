@@ -7,6 +7,8 @@ import {
 
 import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
+import ColumnInspector from "./ColumnInspector";
+
 
 ModuleRegistry.registerModules([
     AllCommunityModule,
@@ -17,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import SpreadsheetToolbar from "./SpreadsheetToolbar";
 import useSpreadsheet from "./useSpreadsheet";
 
+
 export default function SpreadsheetViewer({
     file,
     onClose,
@@ -24,24 +27,48 @@ export default function SpreadsheetViewer({
 
     const spreadsheet = useSpreadsheet(file.id);
     
+    const FIELD_MAPPING = {
+  "CANDIDATE NAME": "full_name",
+  "EMAIL ID": "email",
+  "CONTACT NUMBER": "phone",
+  "CURRENT ORG": "current_company",
+  "ACADEMICS": "academics",
+  "CURRENT FIXED CTC": "current_ctc",
+  "POSITION": "position",
+  "LOCATION": "location",
+  "SENT ON": "sent_on",
+  "SOURCED BY": "sourced_by",
+  "HR": "hr",
+  "LINKEDIN PROFILE LINK": "linkedin",
+  "UPDATED BY": "updated_by",
+  "REMARKS By Sir": "remarks",
+};
+
+ const [selectedCell, setSelectedCell] = useState(null);
+    
+
+    const onCellClicked = ({ data, colDef, rowIndex }) => {
+    if (!data) return;
+
+    setSelectedCell({
+        rowIndex: rowIndex + 1,
+        column: colDef.headerName,
+        value: data[colDef.field],
+    });
+};
 
 const [activeSheet, setActiveSheet] = useState(0);
-    console.log(spreadsheet.columns);
-    console.log(spreadsheet.rows[0]);
+
 
     const columnDefs = spreadsheet.columns.map((column) => ({
     field: column,
     headerName: column,
     editable: true,
-
-    filter: true,
     sortable: true,
-    resizable: true,
-
+    filter: true,
     floatingFilter: true,
-}));
-
-    
+    resizable: true,
+}));    
 
     if (spreadsheet.error) {
         return (
@@ -103,20 +130,21 @@ const [activeSheet, setActiveSheet] = useState(0);
         height: "100%",
     }}
 >
+    <ColumnInspector selectedCell={selectedCell} />
+    
     <AgGridReact
+    headerHeight={48}
+    groupHeaderHeight={48}
     enableCellTextSelection={true}
     ensureDomOrder={true}
     suppressClipboardPaste={false}
     copyHeadersToClipboard={false}
-    rowData={
-    spreadsheet.search
-        ? spreadsheet.filteredRows
-        : spreadsheet.rows
-}
+    onCellClicked={onCellClicked}
+    rowData={spreadsheet.filteredRows}
 getRowId={(params) => params.data.__id}
     columnDefs={columnDefs}
 
-    singleClickEdit={true}
+    singleClickEdit={false}
 
 stopEditingWhenCellsLoseFocus={true}
 
@@ -138,16 +166,18 @@ enterNavigatesVerticallyAfterEdit={true}
     rowSelection="multiple"
 
     onCellValueChanged={async (params) => {
-    const column = params.colDef.field;
-
     await spreadsheet.updateCell(
         params.data.__id,
-        column,
+        params.colDef.field,
         params.newValue
     );
 }}
 />
 </div>
+</div>
+
+
+<div className="h-12 border-t ...">
 <div className="h-12 border-t border-slate-700 bg-[#1b2940] flex items-center px-2 gap-2">
 
     <Button variant="secondary">

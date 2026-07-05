@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/lib/supabase";
 
 const statuses = ["Applied", "Screening", "Shortlisted", "Interview Scheduled", "Selected", "Offer Released", "Joined", "Rejected", "On Hold"];
 const sources = ["LinkedIn", "Job Board", "Referral", "Direct", "Agency", "Other"];
@@ -129,11 +130,10 @@ const duplicate = useDuplicateCheck(
 });
     }
   }, [candidate, open]);
-  const saveCandidate = () => {
-  onSave({
+  const saveCandidate = async () => {
+  const savedCandidate = await onSave({
     ...form,
 
-    // Empty date should be null, not ""
     candidate_date: form.candidate_date || null,
 
     experience_years: form.experience_years
@@ -148,7 +148,6 @@ const duplicate = useDuplicateCheck(
       ? Number(form.expected_ctc)
       : null,
 
-    // Optional text fields
     phone: form.phone || null,
     linkedin: form.linkedin || null,
     location: form.location || null,
@@ -162,23 +161,133 @@ const duplicate = useDuplicateCheck(
     position: form.position || null,
     data_file_id: form.data_file_id || null,
   });
+
+  return savedCandidate;
 };
+
+async function syncCandidateToSpreadsheet(candidate) {
+
+    if (!candidate.data_file_id) return;
+
+    const { data: file } = await supabase
+        .from("data_files")
+        .select("*")
+        .eq("id", candidate.data_file_id)
+        .single();
+
+    if (!file) return;
+
+    const rows =
+  typeof file.rows_data === "string"
+    ? JSON.parse(file.rows_data || "[]")
+    : file.rows_data || [];
+
+    const rowIndex = rows.findIndex(
+  (row) =>
+    row._candidate_id === candidate.id ||
+    (candidate.email &&
+      row.Email?.toLowerCase() === candidate.email.toLowerCase()) ||
+    (candidate.phone &&
+      row.Phone === candidate.phone)
+);
+
+    const row = {};
+
+const aliases = {
+  full_name: ["Name", "Candidate Name", "Full Name"],
+  email: ["Email", "Email ID", "Email Address"],
+  phone: ["Phone", "Contact Number", "Mobile", "Mobile Number"],
+  current_company: ["Company", "Current Company", "Current Org"],
+  position: ["Position", "Position Title", "Job Title"],
+  notes: ["Remarks", "Notes"],
+  status: ["Status"],
+  experience_years: [
+    "Experience",
+    "Experience (Yrs)",
+    "Years of Experience",
+  ],
+  location: ["Location"],
+};
+
+const values = {
+  full_name: candidate.full_name,
+  email: candidate.email,
+  phone: candidate.phone,
+  current_company: candidate.current_company,
+  position: candidate.position,
+  notes: candidate.notes,
+  status: candidate.status,
+  experience_years: candidate.experience_years,
+  location: candidate.location,
+};
+
+file.columns.forEach((column) => {
+  for (const [field, names] of Object.entries(aliases)) {
+    if (
+      names.some(
+        (name) =>
+          name.toLowerCase() === column.toLowerCase()
+      )
+    ) {
+      row[column] = values[field];
+      break;
+    }
+  }
+});
+
+row._candidate_id = candidate.id;
+row.spreadsheet_id = candidate.data_file_id;
+
+    if (rowIndex >= 0) {
+        rows[rowIndex] = {
+            ...rows[rowIndex],
+            ...row,
+        };
+    } else {
+        rows.push({
+    __id: crypto.randomUUID(),
+    _row_id: crypto.randomUUID(),
+    _candidate_id: candidate.id,
+    spreadsheet_id: candidate.data_file_id,
+    ...row,
+});
+    }
+
+    await supabase
+        .from("data_files")
+        .update({
+            rows_data: rows,
+        })
+        .eq("id", file.id);
+}
 
   const handleSubmit = async (e) => {
   e.preventDefault();
 
-  const duplicate = await findCandidateDuplicate(
-    form,
-    candidate?.id
-  );
+  try {
 
-  if (duplicate.exactMatch) {
-    setPendingSave(duplicate.exactMatch);
-    setShowDuplicateDialog(true);
-    return;
+    const duplicate = await findCandidateDuplicate(
+      form,
+      candidate?.id
+    );
+
+    if (duplicate.exactMatch) {
+      setPendingSave(duplicate.exactMatch);
+      setShowDuplicateDialog(true);
+      return;
+    }
+
+    const savedCandidate = await saveCandidate();
+
+    if (savedCandidate) {
+      await syncCandidateToSpreadsheet(savedCandidate);
+    }
+
+    onOpenChange(false);
+
+  } catch (err) {
+    console.error(err);
   }
-
-  saveCandidate();
 };
 
   return (
@@ -420,10 +529,15 @@ const duplicate = useDuplicateCheck(
   open={showDuplicateDialog}
   onOpenChange={setShowDuplicateDialog}
   candidate={pendingSave}
-  onSaveAnyway={() => {
+  onSaveAnyway={async () => {
     setShowDuplicateDialog(false);
-    saveCandidate();
-  }}
+
+    const savedCandidate = await saveCandidate();
+
+    if (savedCandidate) {
+        await syncCandidateToSpreadsheet(savedCandidate);
+    }
+}}
 />
     </Dialog>);
 }

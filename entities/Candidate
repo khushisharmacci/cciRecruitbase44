@@ -28,7 +28,7 @@
     "current_role": {
       "type": "string"
     },
-    "expected_ctc": {
+    "expected_salary": {
       "type": "number"
     },
     "location": {
@@ -76,11 +76,19 @@
     "assigned_to": {
       "type": "string"
     },
-    "position": {
+    "position_title": {
       "type": "string"
     },
     "photo_url": {
       "type": "string"
+    },
+    "spreadsheet_id": {
+      "type": "string",
+      "description": "Linked DataFile ID for two-way sync"
+    },
+    "spreadsheet_row_id": {
+      "type": "string",
+      "description": "Unique row identifier within the linked spreadsheet"
     }
   },
   "required": [

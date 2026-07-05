@@ -48,7 +48,7 @@ export default function SpreadsheetToolbar({
 
             <Input
               value={search}
-              onChange={(e)=>setSearch(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
               placeholder="Search spreadsheet..."
               className="
                 pl-10

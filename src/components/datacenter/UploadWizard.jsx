@@ -350,7 +350,7 @@ if (!tableName) {
 
     if (fileError) throw fileError;
 
-    const dataFileId = dataFile.id;
+    const spreadsheetRows = [];
 
     const BATCH_SIZE = 50;
 
@@ -411,13 +411,17 @@ if (field === "sent_on" && value) {
           record.company_id = companyId;
                     if (entity === "Candidate") {
             record.data_file_id = dataFileId;
+            record.spreadsheet_id = dataFileId;
           }
 
           try {
-            const { data, error } = await supabase
+            const { data: inserted, error } = await supabase
   .from(tableName)
   .insert([record])
-  .select();
+  .select()
+  .single();
+
+if (error) throw error;
 
 console.log("INSERT RECORD", record);
 
@@ -427,6 +431,16 @@ if (error) {
 }
 
             success++;
+            if (entity === "Candidate") {
+  spreadsheetRows.push({
+    __id: crypto.randomUUID(),
+
+    ...row,
+
+    _candidate_id: inserted.id,
+    spreadsheet_id: dataFileId,
+  });
+}
           } catch (err) {
   console.error("=================================");
   console.error("IMPORT FAILED");
@@ -443,12 +457,14 @@ if (error) {
     }
 
     const { error: updateError } = await supabase
-      .from("data_files")
-      .update({
+    .from("data_files")
+    .update({
         imported_count: success,
         sync_status: failed === 0 ? "synced" : "error",
-      })
-      .eq("id", dataFileId);
+
+        rows_data: spreadsheetRows,
+    })
+    .eq("id", dataFileId);
 
     if (updateError) {
       console.error(updateError);
