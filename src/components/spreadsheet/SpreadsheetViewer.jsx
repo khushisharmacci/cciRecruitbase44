@@ -9,6 +9,10 @@ import "ag-grid-community/styles/ag-grid.css";
 import "ag-grid-community/styles/ag-theme-quartz.css";
 import ColumnInspector from "./ColumnInspector";
 
+import { syncRowToCandidate, saveSpreadsheetRows } from "@/lib/syncService";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+
 
 ModuleRegistry.registerModules([
     AllCommunityModule,
@@ -26,8 +30,11 @@ export default function SpreadsheetViewer({
 }) {
 
     const spreadsheet = useSpreadsheet(file.id);
+    const queryClient = useQueryClient();
+const [syncing, setSyncing] = useState(false);
     
     const FIELD_MAPPING = {
+  "SR.NO.": "row_order",
   "CANDIDATE NAME": "full_name",
   "EMAIL ID": "email",
   "CONTACT NUMBER": "phone",
@@ -57,18 +64,78 @@ export default function SpreadsheetViewer({
     });
 };
 
+const handleSync = async () => {
+    setSyncing(true);
+
+    try {
+        const dataFile = {
+    ...file,
+    columns: spreadsheet.columns,
+    rows_data: spreadsheet.rows,
+};
+
+        for (const row of spreadsheet.rows) {
+            const result = await syncRowToCandidate(
+                row,
+                dataFile
+            );
+
+            if (result?.row) {
+                const srNo = row["SR.NO."];
+
+Object.assign(row, result.row);
+
+row["SR.NO."] = srNo;
+            }
+        }
+
+        await saveSpreadsheetRows(
+            file.id,
+            spreadsheet.rows
+        );
+
+        queryClient.invalidateQueries({
+            queryKey: ["candidates"],
+        });
+
+        queryClient.invalidateQueries({
+            queryKey: ["data-files"],
+        });
+
+        toast.success("Spreadsheet synced");
+
+    } catch (err) {
+        console.error(err);
+        toast.error("Sync failed");
+    }
+
+    setSyncing(false);
+};
+
 const [activeSheet, setActiveSheet] = useState(0);
 
 
-    const columnDefs = (spreadsheet.columns ?? []).map((column) => ({
-    field: column,
-    headerName: column,
-    editable: true,
-    sortable: true,
-    filter: true,
-    floatingFilter: true,
-    resizable: true,
-}));    
+    const columnDefs = (spreadsheet.columns ?? []).map((column) => {
+    if (column === "SR.NO.") {
+        return {
+            field: column,
+            headerName: column,
+            editable: false,
+            width: 90,
+            valueGetter: (params) => params.node.rowIndex + 1,
+        };
+    }
+
+    return {
+        field: column,
+        headerName: column,
+        editable: true,
+        sortable: true,
+        filter: true,
+        floatingFilter: true,
+        resizable: true,
+    };
+});   
 
     if (spreadsheet.error) {
         return (
@@ -89,7 +156,8 @@ const [activeSheet, setActiveSheet] = useState(0);
             </div>
         );
     }
-
+console.log("Columns:", spreadsheet.columns);
+console.log("First Row:", spreadsheet.filteredRows[0]);
     return (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-center items-center">
 
@@ -121,6 +189,15 @@ const [activeSheet, setActiveSheet] = useState(0);
                     selectedRows={spreadsheet.selectedRows}
                     exportCSV={spreadsheet.exportCSV}
                 />
+
+                <div className="flex justify-end px-4 py-2 bg-[#1b2940] border-b border-slate-700">
+    <Button
+        onClick={handleSync}
+        disabled={syncing}
+    >
+        {syncing ? "Syncing..." : "Sync to Candidates"}
+    </Button>
+</div>
 
                 <div className="flex-1 pb-12">
     <div
@@ -166,11 +243,44 @@ enterNavigatesVerticallyAfterEdit={true}
     rowSelection="multiple"
 
     onCellValueChanged={async (params) => {
+    console.log("FIELD:", params.colDef.field);
+    console.log("OLD:", params.oldValue);
+    console.log("NEW:", params.newValue);
+    console.log("ROW:", params.data);
+
     await spreadsheet.updateCell(
         params.data.__id,
         params.colDef.field,
         params.newValue
     );
+
+    if (params.data._candidate_id) {
+        try {
+            const result = await syncRowToCandidate(
+                params.data,
+                {
+                    ...file,
+                    columns: spreadsheet.columns,
+                    rows_data: spreadsheet.rows,
+                }
+            );
+
+            if (result?.row) {
+                const srNo = params.data["SR.NO."];
+
+Object.assign(params.data, result.row);
+
+params.data["SR.NO."] = srNo;
+
+                await saveSpreadsheetRows(
+                    file.id,
+                    spreadsheet.rows
+                );
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }
 }}
 />
 </div>

@@ -229,7 +229,11 @@ file.columns.forEach((column) => {
           name.toLowerCase() === column.toLowerCase()
       )
     ) {
-      row[column] = values[field];
+     if (field) {
+    if (column !== "SR.NO." && field) {
+    row[column] = values[field] ?? row[column];
+}
+}
       break;
     }
   }
@@ -240,9 +244,10 @@ row.spreadsheet_id = candidate.data_file_id;
 
     if (rowIndex >= 0) {
         rows[rowIndex] = {
-            ...rows[rowIndex],
-            ...row,
-        };
+    ...rows[rowIndex],
+    ...row,
+    "SR.NO.": rows[rowIndex]["SR.NO."] ?? row["SR.NO."],
+};
     } else {
         rows.push({
     __id: crypto.randomUUID(),

@@ -96,7 +96,7 @@ export default function SpreadsheetToolbar({
           )}
 
           <Button
-            onClick={()=>addRow.mutate()}
+            onClick={addRow}
           >
 
             <Plus className="mr-2 h-4 w-4"/>
@@ -123,7 +123,7 @@ export default function SpreadsheetToolbar({
 
               ){
 
-                deleteRows.mutate();
+                deleteRows()
 
               }
 

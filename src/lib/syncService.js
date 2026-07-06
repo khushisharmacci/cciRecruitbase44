@@ -114,7 +114,7 @@ export async function findDuplicateCandidate(name, phone, email) {
  *
  * @returns { candidate, row } - the created/updated candidate and the updated row
  */
-export async function syncRowToCandidate(row, dataFile, tenantFilter, stampRecord) {
+export async function syncRowToCandidate(row, dataFile) {
   const columns = JSON.parse(dataFile.columns || "[]");
   const mappings = autoDetectMappings(columns);
 
@@ -142,27 +142,27 @@ export async function syncRowToCandidate(row, dataFile, tenantFilter, stampRecor
     candidateData.full_name,
     candidateData.phone,
     candidateData.email,
-    tenantFilter
   );
 
   const rowId = row._row_id || generateRowId();
 
   if (existing) {
     // Update existing candidate with spreadsheet data + linking
-    const updated = await base44.entities.Candidate.update(existing.id, {
-      ...candidateData,
-      spreadsheet_id: dataFile.id,
-      spreadsheet_row_id: rowId,
-    });
+  const { data: updated, error } = await supabase
+  .from("candidates")
+  .update(data)
+  .eq("id", existing.id)
+  .select()
+  .single();
     return { candidate: updated, row: { ...row, _row_id: rowId, _candidate_id: updated.id } };
   }
 
   // Create new candidate
-  const newCandidate = await base44.entities.Candidate.create(stampRecord({
-    ...candidateData,
-    spreadsheet_id: dataFile.id,
-    spreadsheet_row_id: rowId,
-  }));
+  const { data: newCandidate, error } = await supabase
+  .from("candidates")
+  .insert([candidateData])
+  .select()
+  .single();
   return { candidate: newCandidate, row: { ...row, _row_id: rowId, _candidate_id: newCandidate.id } };
 }
 
@@ -171,7 +171,7 @@ export async function syncRowToCandidate(row, dataFile, tenantFilter, stampRecor
  * Returns { rows, row_id } - the full updated rows array and the row ID.
  */
 export function syncCandidateToRow(candidate, dataFile) {
-  const columns = JSON.parse(dataFile.columns || "[]");
+  
   const mappings = autoDetectMappings(columns);
   let rows = [];
   try { rows = JSON.parse(dataFile.rows_data || "[]"); } catch { rows = []; }
@@ -209,10 +209,17 @@ export function syncCandidateToRow(candidate, dataFile) {
  * Save rows back to a DataFile entity.
  */
 export async function saveSpreadsheetRows(dataFileId, rows) {
-  return await base44.entities.DataFile.update(dataFileId, {
-    rows_data: JSON.stringify(rows),
-    row_count: rows.filter((r) => !r._row_id || !r._row_id.startsWith("__deleted")).length,
-  });
+  const { error } = await supabase
+    .from("data_files")
+    .update({
+      rows_data: JSON.stringify(rows),
+      row_count: rows.filter(
+        r => !r._row_id || !r._row_id.startsWith("__deleted")
+      ).length,
+    })
+    .eq("id", dataFileId);
+
+  if (error) throw error;
 }
 
 // ─── Remarks Synchronization ────────────────────────────────────────────────
@@ -228,17 +235,25 @@ export async function saveSpreadsheetRows(dataFileId, rows) {
  * @param {string} [params.callLogId] - Optional call log ID to update discussion_notes
  */
 export async function syncRemarks({ candidateId, remarks, spreadsheetId, spreadsheetRowId, callLogId }) {
-  const updates = [];
 
   // Update candidate notes
-  if (candidateId) {
-    updates.push(base44.entities.Candidate.update(candidateId, { notes: remarks }));
-  }
+    const { error } = await supabase
+  .from("candidates")
+  .update({
+    notes: remarks,
+  })
+  .eq("id", candidateId);
+
+if (error) throw error;
 
   // Update spreadsheet remarks column
   if (spreadsheetId) {
     try {
-      const dataFile = await base44.entities.DataFile.get(spreadsheetId);
+      const { data: dataFile } = await supabase
+  .from("data_files")
+  .select("*")
+  .eq("id", spreadsheetId)
+  .single();
       const columns = JSON.parse(dataFile.columns || "[]");
       const remarksCol = getColumnForField("notes", columns);
       if (remarksCol) {
@@ -250,9 +265,15 @@ export async function syncRemarks({ candidateId, remarks, spreadsheetId, spreads
         );
         if (rowIdx >= 0) {
           rows[rowIdx][remarksCol] = remarks;
-          updates.push(base44.entities.DataFile.update(spreadsheetId, {
-            rows_data: JSON.stringify(rows),
-          }));
+          await supabase
+  .from("data_files")
+  .update({
+    rows_data: JSON.stringify(rows),
+    row_count: rows.filter(
+      r => !r._row_id || !r._row_id.startsWith("__deleted")
+    ).length,
+  })
+  .eq("id", spreadsheetId);
         }
       }
     } catch { /* spreadsheet may not exist */ }
@@ -260,10 +281,15 @@ export async function syncRemarks({ candidateId, remarks, spreadsheetId, spreads
 
   // Update call log discussion notes
   if (callLogId) {
-    updates.push(base44.entities.DailyReportCallLog.update(callLogId, { discussion_notes: remarks }));
+    const { error } = await supabase
+  .from("daily_report_call_logs")
+  .update({
+    discussion_notes: remarks,
+  })
+  .eq("id", callLogId);
+  if (error) throw error;
   }
 
-  await Promise.all(updates);
 }
 
 // ─── Full Import Sync ───────────────────────────────────────────────────────
@@ -273,7 +299,7 @@ export async function syncRemarks({ candidateId, remarks, spreadsheetId, spreads
  *
  * @returns { created, updated, failed }
  */
-export async function syncSpreadsheetToCandidates(dataFile, tenantFilter, stampRecord) {
+export async function syncSpreadsheetToCandidates(dataFile) {
   const columns = JSON.parse(dataFile.columns || "[]");
   let rows = [];
   try { rows = JSON.parse(dataFile.rows_data || "[]"); } catch { rows = []; }
@@ -285,10 +311,14 @@ export async function syncSpreadsheetToCandidates(dataFile, tenantFilter, stampR
     const batch = rows.slice(i, i + BATCH);
     await Promise.all(batch.map(async (row) => {
       try {
-        const result = await syncRowToCandidate(row, dataFile, tenantFilter, stampRecord);
+        const result = await syncRowToCandidate(row, dataFile);
         if (result.candidate) {
           // Update the row with linking data
-          Object.assign(row, result.row);
+          const srNo = row["SR.NO."];
+
+Object.assign(row, result.row);
+
+row["SR.NO."] = srNo;
           // Check if it was create or update by looking at created_date
           if (result.candidate.created_date === result.candidate.updated_date) created++;
           else updated++;

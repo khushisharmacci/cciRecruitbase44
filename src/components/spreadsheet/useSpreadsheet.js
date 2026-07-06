@@ -107,7 +107,7 @@ blank.__id = crypto.randomUUID();
             await saveSpreadsheet(updated);
         },
     });
-
+    
   const deleteRows = useMutation({
     mutationFn: async () => {
       if (!selectedRows.length) return;
