@@ -9,54 +9,15 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Upload, FileSpreadsheet, Loader2, ChevronRight,
-  CheckCircle, AlertCircle, RefreshCw, X, Eye, FolderPlus, ArrowRight, Table2
+  CheckCircle, AlertCircle, RefreshCw, X, FolderPlus, ArrowRight, Table2
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-
 import ColumnMapper from "@/components/datacenter/ColumnMapper";
 
-// ─── Entity Field Definitions ─────────────────────────────────────────────────
-const ENTITY_FIELDS = {
-  Candidate: {
-    required: ["full_name", "email"],
-    optional: ["phone", "skills", "experience_years", "current_company", "current_job_role", "expected_ctc", "location", "source", "position", "notes"],
-    labels: { full_name: "Full Name", email: "Email", phone: "Phone", skills: "Skills", experience_years: "Experience (Yrs)", current_company: "Current Company", current_job_role: "Current Role", expected_ctc: "Expected CTC", location: "Location", source: "Source", position: "Position", notes: "Notes" },
-    defaults: { status: "Applied" }
-  },
-  Client: {
-    required: ["name"],
-    optional: ["industry", "contact_person", "contact_email", "contact_phone", "address", "notes"],
-    labels: { name: "Company Name", industry: "Industry", contact_person: "Contact Person", contact_email: "Email", contact_phone: "Phone", address: "Address", notes: "Notes" },
-    defaults: { status: "Active" }
-  },
-  Lead: {
-    required: ["company_name", "contact_person"],
-    optional: ["email", "phone", "value", "source", "notes"],
-    labels: { company_name: "Company", contact_person: "Contact", email: "Email", phone: "Phone", value: "Value", source: "Source", notes: "Notes" },
-    defaults: { stage: "New Lead" }
-  },
-  Position: {
-    required: ["title"],
-    optional: ["client_name", "department", "experience_min", "experience_max", "skills_required", "location", "salary_min", "salary_max", "description", "openings"],
-    labels: { title: "Job Title", client_name: "Client", department: "Department", experience_min: "Min Exp", experience_max: "Max Exp", skills_required: "Skills Required", location: "Location", salary_min: "Min Salary", salary_max: "Max Salary", description: "Description", openings: "Openings" },
-    defaults: { status: "Open", openings: 1 }
-  },
-  RevenueRecord: {
-    required: ["client_name", "amount", "date"],
-    optional: ["recruiter_name", "candidate_name", "type", "invoice_number"],
-    labels: { client_name: "Client", amount: "Amount", date: "Date", recruiter_name: "Recruiter", candidate_name: "Candidate", type: "Type", invoice_number: "Invoice #" },
-    defaults: { status: "Pending", type: "Placement Fee" }
-  },
-  TeamGroup: {
-    required: ["name"],
-    optional: ["lead_name", "department", "members", "description"],
-    labels: { name: "Team Name", lead_name: "Team Lead", department: "Department", members: "Members", description: "Description" },
-    defaults: {}
-  }
-};
-
-const NUMERIC_FIELDS = ["experience_years", "expected_s", "salary_min", "salary_max", "experience_min", "experience_max", "openings", "amount", "value"];
+// Import centralized utilities
+import { ENTITY_DEFINITIONS, NUMERIC_FIELDS } from "@/lib/spreadsheetMapping";
+import { syncSpreadsheetRowsToCandidates, invalidateCandidatesCache } from "@/lib/candidateSync";
 
 // ─── File Parsing (client-side) ──────────────────────────────────────────────
 function parseFile(file) {
@@ -114,7 +75,7 @@ function parseFile(file) {
   });
 }
 
-// ─── Step indicator ──────────────────────────────────────────────────────────
+// ─── Step indicator ───────────────────────────────────────────────────────────
 const STEPS = [
   { key: "folder", label: "Folder" },
   { key: "upload", label: "Upload" },
@@ -147,7 +108,7 @@ function StepBar({ current }) {
   );
 }
 
-// ─── Main Wizard ─────────────────────────────────────────────────────────────
+// ─── Main Wizard ────────────────────────────────────────────────────────────────
 export default function UploadWizard({ folders, onDone, onCreateFolder, queryClient }) {
   const { stampRecord, companyId } = useTenant();
   const [step, setStep] = useState("folder");
@@ -168,7 +129,7 @@ export default function UploadWizard({ folders, onDone, onCreateFolder, queryCli
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
 
-  const entityDef = ENTITY_FIELDS[entity];
+  const entityDef = ENTITY_DEFINITIONS[entity];
 
   const handleCreateFolder = async () => {
     if (!newFolderName.trim()) return;
@@ -204,15 +165,15 @@ export default function UploadWizard({ folders, onDone, onCreateFolder, queryCli
     setImporting(true);
     try {
       const tableMap = {
-  Candidate: "candidates",
-  Client: "clients",
-  Lead: "leads",
-  Position: "positions",
-  RevenueRecord: "revenue_records",
-  TeamGroup: "team_groups"
-};
+        Candidate: "candidates",
+        Client: "clients",
+        Lead: "leads",
+        Position: "positions",
+        RevenueRecord: "revenue_records",
+        TeamGroup: "team_groups"
+      };
 
-const tableName = tableMap[entity];
+      const tableName = tableMap[entity];
       let success = 0, failed = 0;
       const BATCH = 50;
 
@@ -243,49 +204,72 @@ const tableName = tableMap[entity];
           }
 
           try {
-  const { error } = await supabase
-    .from(tableName)
-    .insert([
-      {
-        ...record,
-        company_id: companyId,
-      },
-    ]);
+            const { error } = await supabase
+              .from(tableName)
+              .insert([
+                {
+                  ...record,
+                  company_id: companyId,
+                },
+              ]);
 
-  if (error) throw error;
+            if (error) throw error;
 
-  success++;
-} catch (err) {
-  console.error(err);
-  failed++;
-}
+            success++;
+          } catch (err) {
+            console.error(err);
+            failed++;
+          }
         }));
       }
 
       // Save DataFile record
       const { data, error } = await supabase
-  .from("data_files")
-  .insert([
-    {
-      company_id: companyId,
-      name: file.name.replace(/\.[^/.]+$/, ""),
-      original_filename: file.name,
-      folder_id: selectedFolder?.id || null,
-      folder_name: selectedFolder?.name || null,
-      entity_type: entity,
-      row_count: allRows.length,
-      column_count: headers.length,
-      columns: headers,
-      rows_data: allRows.slice(0, 10000),
-      sync_status: failed === 0 ? "synced" : "error",
-      imported_count: success,
-      size_bytes: file.size || 0,
-    },
-  ])
-  .select();
+        .from("data_files")
+        .insert([
+          {
+            company_id: companyId,
+            name: file.name.replace(/\.[^/.]+$/, ""),
+            original_filename: file.name,
+            folder_id: selectedFolder?.id || null,
+            folder_name: selectedFolder?.name || null,
+            entity_type: entity,
+            row_count: allRows.length,
+            column_count: headers.length,
+            columns: headers,
+            rows_data: allRows.slice(0, 10000),
+            sync_status: failed === 0 ? "synced" : "error",
+            imported_count: success,
+            size_bytes: file.size || 0,
+          },
+        ])
+        .select();
 
-console.log("DATA FILE INSERT", data);
-console.log("DATA FILE ERROR", error);
+      if (data && data.length > 0 && entity === "Candidate") {
+        // Trigger async candidate sync after spreadsheet save
+        const dataFileId = data[0].id;
+        syncSpreadsheetRowsToCandidates(dataFileId, allRows, mappings, companyId, customFields)
+          .then((syncResult) => {
+            console.log("Candidate sync result:", syncResult);
+            // Invalidate candidates cache
+            invalidateCandidatesCache(queryClient);
+            
+            // Optionally show sync status
+            if (syncResult.created.length > 0) {
+              toast.success(`${syncResult.created.length} new candidates created`);
+            }
+            if (syncResult.updated.length > 0) {
+              toast.success(`${syncResult.updated.length} existing candidates updated`);
+            }
+            if (syncResult.failed.length > 0) {
+              toast.warning(`${syncResult.failed.length} rows failed to sync`);
+            }
+          })
+          .catch((err) => {
+            console.error("Candidate sync error:", err);
+            toast.error("Some rows could not be synced to candidates");
+          });
+      }
 
       queryClient.invalidateQueries();
       setImportResult({ success, failed, total: allRows.length });
@@ -303,7 +287,7 @@ console.log("DATA FILE ERROR", error);
     setStep("preview");
   };
 
-  // ── STEP: Folder ──────────────────────────────────────────────────────────
+  // ── STEP: Folder ────────────────────────────────────────────────────────────
   if (step === "folder") return (
     <div className="space-y-5">
       <StepBar current="folder" />
@@ -346,7 +330,7 @@ console.log("DATA FILE ERROR", error);
         <Select value={entity} onValueChange={(v) => { setEntity(v); setMappings({}); setCustomFields([]); }}>
           <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {Object.keys(ENTITY_FIELDS).map((e) => (
+            {Object.keys(ENTITY_DEFINITIONS).map((e) => (
               <SelectItem key={e} value={e}>{e === "RevenueRecord" ? "Revenue Records" : e === "TeamGroup" ? "Teams" : e + "s"}</SelectItem>
             ))}
           </SelectContent>
@@ -359,7 +343,7 @@ console.log("DATA FILE ERROR", error);
     </div>
   );
 
-  // ── STEP: Upload ───────────────────────────────────────────────────────────
+  // ── STEP: Upload ────────────────────────────────────────────────────────────
   if (step === "upload") return (
     <div className="space-y-5">
       <StepBar current="upload" />
@@ -426,7 +410,7 @@ console.log("DATA FILE ERROR", error);
     </div>
   );
 
-  // ── STEP: Mapping ──────────────────────────────────────────────────────────
+  // ── STEP: Mapping ────────────────────────────────────────────────────────────
   if (step === "mapping") return (
     <div className="space-y-4">
       <StepBar current="mapping" />
@@ -443,7 +427,7 @@ console.log("DATA FILE ERROR", error);
     </div>
   );
 
-  // ── STEP: Preview ──────────────────────────────────────────────────────────
+  // ── STEP: Preview ────────────────────────────────────────────────────────────
   if (step === "preview") {
     const mappedEntries = Object.entries(mappings).filter(([, v]) => v);
     const previewRows = allRows.slice(0, 15);
@@ -475,7 +459,7 @@ console.log("DATA FILE ERROR", error);
                 <tr key={i} className={i % 2 === 0 ? "bg-card" : "bg-muted/20"}>
                   <td className="px-2 py-1.5 text-muted-foreground font-mono border-r border-border/40">{i + 1}</td>
                   {headers.map((h) => (
-                    <td key={h} className={cn("px-3 py-1.5 whitespace-nowrap max-w-[200px] truncate border-r border-border/40 last:border-r-0 text-foreground", !mappings[h] && "text-muted-foreground/50")}>
+                    <td key={h} className={cn("px-3 py-1.5 whitespace-nowrap max-w-[200px] truncate border-r border-border/40 last:border-r-0 text-foreground", !mappings[h] && "text-muted-foreground")}>
                       {row[h] || <span className="text-muted-foreground/30">—</span>}
                     </td>
                   ))}
@@ -508,7 +492,7 @@ console.log("DATA FILE ERROR", error);
     );
   }
 
-  // ── STEP: Done ─────────────────────────────────────────────────────────────
+  // ── STEP: Done ───────────────────────────────────────────────────────────────
   if (step === "done" && importResult) return (
     <div className="py-8 flex flex-col items-center gap-4 text-center">
       <div className="h-16 w-16 rounded-full bg-emerald-500/20 flex items-center justify-center">
