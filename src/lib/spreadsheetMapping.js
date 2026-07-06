@@ -36,8 +36,7 @@ export const ENTITY_DEFINITIONS = {
       notes: "Notes",
       linkedin_url: "LinkedIn URL"
     },
-    defaults: { status: "Applied" },
-    duplicateFields: ["email", "phone", "linkedin_url", "full_name"]
+    defaults: { status: "Applied" }
   },
   Client: {
     table: "clients",
@@ -129,9 +128,6 @@ export const ENTITY_DEFINITIONS = {
   }
 };
 
-/**
- * Numeric fields that should be parsed as numbers
- */
 export const NUMERIC_FIELDS = [
   "experience_years",
   "expected_ctc",
@@ -144,55 +140,12 @@ export const NUMERIC_FIELDS = [
   "value"
 ];
 
-/**
- * Spreadsheet-only columns that should not be synced to entities
- */
-export const SPREADSHEET_ONLY_COLUMNS = [
-  "_candidate_id",
-  "_client_id",
-  "_lead_id",
-  "_position_id",
-  "_synced_at",
-  "_sync_status"
-];
-
-/**
- * Get entity definition by entity type
- * @param {string} entityType - e.g., "Candidate", "Client"
- * @returns {object} Entity definition
- */
 export function getEntityDefinition(entityType) {
   const def = ENTITY_DEFINITIONS[entityType];
-  if (!def) {
-    throw new Error(`Unknown entity type: ${entityType}`);
-  }
+  if (!def) throw new Error(`Unknown entity type: ${entityType}`);
   return def;
 }
 
-/**
- * Get all fields for an entity (required + optional)
- * @param {string} entityType
- * @returns {string[]} Array of field names
- */
-export function getAllFields(entityType) {
-  const def = getEntityDefinition(entityType);
-  return [...def.required, ...def.optional];
-}
-
-/**
- * Get table name for entity type
- * @param {string} entityType
- * @returns {string} Table name
- */
-export function getTableName(entityType) {
-  return getEntityDefinition(entityType).table;
-}
-
-/**
- * Check if a row is completely empty (all values are empty/null)
- * @param {object} row - Spreadsheet row
- * @returns {boolean} True if row is empty
- */
 export function isEmptyRow(row) {
   return Object.values(row).every(val => !val || String(val).trim() === "");
 }
