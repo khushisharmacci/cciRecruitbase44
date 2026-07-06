@@ -189,68 +189,10 @@ export function getTableName(entityType) {
 }
 
 /**
- * Convert spreadsheet row to entity record using mappings
- * @param {object} row - Spreadsheet row data
- * @param {object} mappings - Column → Field mappings
- * @param {string} entityType - e.g., "Candidate"
- * @param {object} defaults - Default values for the entity
- * @returns {object} Entity record ready for insert/update
- */
-export function convertRowToRecord(row, mappings, entityType, customFields = []) {
-  const def = getEntityDefinition(entityType);
-  const record = { ...def.defaults };
-  const customData = {};
-
-  Object.entries(mappings).forEach(([header, field]) => {
-    // Skip unmapped columns
-    if (!field || row[header] === undefined || row[header] === "") return;
-
-    const val = row[header];
-    const converted = NUMERIC_FIELDS.includes(field) ? parseFloat(val) || undefined : val;
-
-    // Check if this is a custom field
-    if (customFields.find(cf => cf.key === field)) {
-      customData[field] = converted;
-    } else {
-      record[field] = converted;
-    }
-  });
-
-  // Store custom fields as JSON in notes if entity supports it
-  if (Object.keys(customData).length > 0 && def.optional.includes("notes")) {
-    record.notes = record.notes
-      ? record.notes + "\n\nCustom Fields: " + JSON.stringify(customData, null, 2)
-      : "Custom Fields: " + JSON.stringify(customData, null, 2);
-  }
-
-  return record;
-}
-
-/**
  * Check if a row is completely empty (all values are empty/null)
  * @param {object} row - Spreadsheet row
  * @returns {boolean} True if row is empty
  */
 export function isEmptyRow(row) {
   return Object.values(row).every(val => !val || String(val).trim() === "");
-}
-
-/**
- * Extract syncable fields from a record (excluding spreadsheet-only columns)
- * @param {object} record - Entity record
- * @param {string} entityType
- * @returns {object} Filtered record with only syncable fields
- */
-export function getSyncableFields(record, entityType) {
-  const def = getEntityDefinition(entityType);
-  const syncable = {};
-
-  // Include all entity fields that are defined
-  [...def.required, ...def.optional].forEach(field => {
-    if (record.hasOwnProperty(field)) {
-      syncable[field] = record[field];
-    }
-  });
-
-  return syncable;
 }

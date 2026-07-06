@@ -8,7 +8,7 @@
 
 import { supabase } from "./supabase";
 import { findDuplicateCandidate } from "./duplicateDetection";
-import { isEmptyRow } from "./spreadsheetMapping";
+import { isEmptyRow, NUMERIC_FIELDS } from "./spreadsheetMapping";
 
 /**
  * Sync spreadsheet rows to candidates
@@ -51,7 +51,7 @@ export async function syncSpreadsheetRowsToCandidates(
     }
 
     // Process each row
-    const updatedRows = [];
+    const updatedRows = [...rows];
     const BATCH_SIZE = 10;
 
     for (let i = 0; i < rows.length; i += BATCH_SIZE) {
@@ -63,7 +63,7 @@ export async function syncSpreadsheetRowsToCandidates(
     }
 
     // Save updated rows back to data_files.rows_data
-    if (updatedRows.length > 0) {
+    if (updatedRows.some(r => r._candidate_id)) {
       const { error: updateError } = await supabase
         .from("data_files")
         .update({ rows_data: updatedRows })
@@ -181,7 +181,6 @@ async function processRow(
  * Uses mappings to map columns to fields
  */
 function convertRowToCandidate(row, mappings, customFields = []) {
-  const NUMERIC_FIELDS = ["experience_years", "expected_ctc"];
   const record = { status: "Applied" };
   const customData = {};
 
