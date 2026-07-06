@@ -60,7 +60,7 @@ export default function SpreadsheetViewer({
 const [activeSheet, setActiveSheet] = useState(0);
 
 
-    const columnDefs = spreadsheet.columns.map((column) => ({
+    const columnDefs = (spreadsheet.columns ?? []).map((column) => ({
     field: column,
     headerName: column,
     editable: true,

@@ -10,6 +10,8 @@ export default function useSpreadsheet(fileId) {
   const [sortColumn, setSortColumn] = useState("full_name");
   const [sortDirection, setSortDirection] = useState("asc");
   const [saving, setSaving] = useState(false);
+  const [columns, setColumns] = useState([]);
+const [rows, setRows] = useState([]);
 
     const {
         data,
@@ -139,21 +141,22 @@ blank.__id = crypto.randomUUID();
   }
 
   return {
-    search,
-    setSearch,
-    rows,
-    isLoading,
-    error,
-    refetch,
-    sort,
-    sortColumn,
-    sortDirection,
-    setSelectedRows,
-    selectedRows,
-    updateCell,
-    addRow: addRow.mutate,
-    deleteRows: deleteRows.mutate,
-    exportCSV,
-    saving,
-  };
+  search,
+  setSearch,
+  columns,
+  rows,
+  filteredRows,
+  isLoading,
+  error,
+  refetch,
+  sortColumn,
+  sortDirection,
+  setSelectedRows,
+  selectedRows,
+  updateCell,
+  addRow: addRow.mutate,
+  deleteRows: deleteRows.mutate,
+  exportCSV,
+  saving,
+};
 }
